@@ -30,17 +30,20 @@
 
 }
 body {
-	background:#ffffff;
+	backgroun:#ffffff;
+	background:#111111;
 	width:100%;
 	margin: 0px;
 	padding: 0px;
 	text-align:center;
 	overflow-x:hidden;
+	background-color: 1199ff;
 }
 h1{
 	
 	
-	color:#ffffff;
+	colo:#ffffff;
+	color:#1199aa;
 }
 header{
 	position:relative;
@@ -49,10 +52,10 @@ header{
 }
 #title1{
 	position:absolute;
-	font-size:3em;
-	font-family:'AquilineTwoRegular', Arial, sans-serif;
-	top: -100px;
-	left:-190px;
+	font-size:4em;
+	font-family: Fantasy; Copperplate;
+	top: 120px;
+	left:-250px;
 	z-index:99;
 
 }
@@ -122,6 +125,7 @@ header{
 }
 .left_2{
 	background-color:#ff5b4d;
+	background-color: #1199ff;
 	height:650px;
 	float:left;
 	
@@ -133,6 +137,7 @@ header{
 
 .left{
 	background-color:#ff5b4d;
+	background-color: #1199ff;
 
 	-webkit-transition: background-color 1s ease-out;
     -moz-transition: background-color 1s ease-out;
@@ -148,9 +153,11 @@ header{
 }
 .left:hover{
 	background-color: #1F3761;
+	
 }
 .right_2{
 	background-color:#ff5b4d;
+	background-color: #1199ff;
 	margin-right:1%;
 	float:left;
 	
@@ -160,6 +167,7 @@ header{
 }
 .right{
 	background-color:#ff5b4d;
+	background-color: #1199ff;
 	
 	-webkit-transition: background-color 1s ease-out;
     -moz-transition: background-color 1s ease-out;
@@ -180,6 +188,7 @@ header{
 .solidBG_1{
 	position:absolute;
 	background-color:#ff5b4d;
+	background-color: #1199ff;
 	height:850px;
 	width:98%;
 	margin-left:1%;	
@@ -226,6 +235,7 @@ header{
 	position:absolute;
 
     background-color: #ffffff;
+    background-color: #ff5b4d;
     padding: 8px;  /*set padding to simulate border */	
 	border-radius:50% 50% 50% 50%;
 	height:520px;
