@@ -45,6 +45,13 @@ h1{
 	colo:#ffffff;
 	color:#1199aa;
 }
+
+
+h6{
+	color: #ffaf1g;
+	font-size: 2em;
+}
+
 header{
 	position:relative;
 	top:30px;

@@ -151,7 +151,7 @@ function txtDraw(drawCxt, cx,cy){
 	drawCxt.font= "24pt Trajan Pro Regular";	
 	drawCxt.fillStyle= "rgb(224, 255, 254)";
 	//drawCxt.fillTextCircle("JavaScript 1.8.5             ECMAScript            ",cx ,cy ,210, 4);
-	drawCxt.fillTextCircle("PLEASE ENJOY YOUR STAY",cx ,cy ,210, 4);
+	drawCxt.fillTextCircle("||| | ||| | ||| | ||| | ||| | ",cx ,cy ,210, 4);
 	
 	//rotTxt(rotLyr, x, y);	
 }
