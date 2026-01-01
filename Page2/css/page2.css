@@ -7,3 +7,8 @@ h1 {font-family: sans-serif;
 h2 {font-family: sans-serif;
 font-size: 4em;
 color: #AABBDD;}
+
+table {height: 100px;
+	width: 800px;
+	background-color: gray;
+}
