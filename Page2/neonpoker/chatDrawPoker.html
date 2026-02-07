@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Neon Video Poker (Jacks or Better)</title>
+  <style>
+    :root{
+      --bg0:#071018;
+      --bg1:#0a1a26;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(0,0,0,.25);
+      --border: rgba(255,255,255,.14);
+      --text:#eaf3ff;
+      --muted:#b9c8d9;
+      --accent:#00f5ff;
+      --accent2:#ff2bd6;
+      --good:#6dff8f;
+      --bad:#ff5b6e;
+      --cardTop:#ffffff;
+      --cardBot:#f2f2f2;
+      --cardText:#111;
+      --shadow: rgba(0,0,0,.35);
+      --glow: 0 0 18px rgba(0,245,255,.45), 0 0 38px rgba(255,43,214,.25);
+      --radius: 16px;
+    }
+
+    /* Classic theme overrides */
+    body[data-theme="classic"]{
+      --bg0:#0b2b18;
+      --bg1:#145a32;
+      --panel: rgba(0,0,0,.18);
+      --panel2: rgba(0,0,0,.22);
+      --border: rgba(255,255,255,.12);
+      --text:#f3f7f4;
+      --muted:#c6d5cc;
+      --accent:#ffd34d;
+      --accent2:#7fe3b1;
+      --good:#7fe3b1;
+      --bad:#ff6b6b;
+      --glow: 0 0 0 rgba(0,0,0,0);
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(0,245,255,.18), rgba(0,0,0,0) 45%),
+        radial-gradient(circle at 82% 12%, rgba(255,43,214,.18), rgba(0,0,0,0) 42%),
+        radial-gradient(circle at top, var(--bg1), var(--bg0));
+      min-height:100vh;
+    }
+
+    header{
+      padding: 16px 14px;
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      position: sticky; top:0; z-index: 10;
+      background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.08));
+    }
+
+    header h1{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.5px;
+      display:flex; align-items:center; gap:10px;
+      text-transform: uppercase;
+    }
+
+    /* ===== CHROME NEON TITLE ===== */
+
+    .chrome-title{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    /* Big chrome text */
+    .chrome-text{
+      font-size: 34px;           /* increase size */
+      font-weight: 1000;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+
+      /* Chrome effect */
+      background:
+        linear-gradient(
+          180deg,
+          #ffffff 0%,
+          #dfe6ee 18%,
+          #ffffff 32%,
+          #9fb3c8 48%,
+          #ffffff 62%,
+          #c6d3e0 78%,
+          #ffffff 100%
+        );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+
+      /* Neon glow edge */
+      text-shadow:
+        0 0 8px rgba(0,245,255,.55),
+        0 0 14px rgba(255,43,214,.35),
+        0 0 22px rgba(0,245,255,.25);
+
+      position: relative;
+    }
+
+    /* Subtle chrome highlight sweep */
+    .chrome-text::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(
+          120deg,
+          rgba(255,255,255,0) 30%,
+          rgba(255,255,255,.75) 45%,
+          rgba(255,255,255,0) 60%
+        );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      opacity:.65;
+      pointer-events:none;
+    }
+
+    /* Optional animated sweep (very classy) */
+    @keyframes titleSweep {
+      0%   { transform: translateX(-60%); opacity:.2; }
+      50%  { opacity:.9; }
+      100% { transform: translateX(60%); opacity:.2; }
+    }
+
+    body[data-theme="neon"] .chrome-text::after{
+      animation: titleSweep 4.5s ease-in-out infinite;
+    }
+
+
+
+    .badge{
+      font-size: 11px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+    }
+
+    main{ max-width: 980px; margin: 0 auto; padding: 16px; }
+
+    .panel{
+      background: var(--panel2);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.28);
+    }
+
+    /* Neon pulse animation */
+    @keyframes neonPulse {
+      0%   { transform: translateY(0) scale(1);   filter: brightness(1);   box-shadow: 0 10px 34px rgba(0,0,0,.38), 0 0 0 rgba(0,245,255,0); }
+      50%  { transform: translateY(-1px) scale(1.02); filter: brightness(1.08); box-shadow: 0 14px 40px rgba(0,0,0,.42), 0 0 18px rgba(0,245,255,.35), 0 0 28px rgba(255,43,214,.22); }
+      100% { transform: translateY(0) scale(1);   filter: brightness(1);   box-shadow: 0 10px 34px rgba(0,0,0,.38), 0 0 0 rgba(0,245,255,0); }
+    }
+
+    /* Subtle ambient neon shimmer on the hand area (neon theme only) */
+    @keyframes ambientGlow {
+      0% { box-shadow: 0 0 0 rgba(0,245,255,0), 0 0 0 rgba(255,43,214,0); }
+      50%{ box-shadow: 0 0 22px rgba(0,245,255,.12), 0 0 34px rgba(255,43,214,.10); }
+      100%{ box-shadow: 0 0 0 rgba(0,245,255,0), 0 0 0 rgba(255,43,214,0); }
+    }
+
+    .row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .stats{ display:flex; gap:10px; flex-wrap:wrap; }
+    .pill{
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .pill strong{ color: var(--text); }
+
+    .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+    button{
+      appearance:none; border:none; cursor:pointer;
+      color: var(--text);
+      background: rgba(255,255,255,.10);
+      border:1px solid var(--border);
+      font-weight: 900;
+      padding: 10px 14px;
+      border-radius: 14px;
+      transition: transform .06s ease, filter .2s ease, opacity .2s ease;
+      box-shadow: 0 10px 28px var(--shadow);
+    }
+    button.primary{
+      background: linear-gradient(135deg, rgba(0,245,255,.18), rgba(255,43,214,.18));
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 10px 34px rgba(0,0,0,.38), var(--glow);
+    }
+    button:hover{ filter: brightness(1.06); }
+    button:active{ transform: translateY(1px); }
+    button:disabled{ opacity:.45; cursor:not-allowed; box-shadow:none; }
+
+    /* Pulse whichever action is next */
+    body.phase-ready #dealBtn.primary { animation: neonPulse 1.4s ease-in-out infinite; }
+    body.phase-dealt #drawBtn        { animation: neonPulse 1.4s ease-in-out infinite; }
+
+    .hint{ color: var(--muted); font-size: 13px; line-height: 1.35; }
+
+    .table{ margin-top: 14px; display:flex; flex-direction:column; gap:12px; }
+
+    .hand{
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+      padding: 14px 8px;
+      background: rgba(255,255,255,.05);
+      border:1px dashed rgba(255,255,255,.16);
+      border-radius: var(--radius);
+      min-height: 180px;
+      align-items: center;
+    }
+    body[data-theme="neon"] .hand{
+      animation: ambientGlow 3.8s ease-in-out infinite;
+    }
+
+    /* ---------- FLIP CARD STRUCTURE ---------- */
+    .card{
+      width: 150px; height: 304px;
+      perspective: 1400px;
+      user-select:none;
+    }
+    .card.selectable{ cursor:pointer; }
+
+    .card-inner{
+      width:100%; height:100%;
+      border-radius: 16px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform .55s cubic-bezier(.2,.85,.25,1);
+      box-shadow: 0 14px 30px rgba(0,0,0,.32);
+    }
+
+    /* When held: flip to back */
+    .card.held .card-inner{
+      transform: rotateY(180deg);
+      box-shadow: 0 16px 34px rgba(0,0,0,.36), var(--glow);
+    }
+    .card-face{
+      position:absolute;
+      inset:0;
+      border-radius: 16px;
+      overflow:hidden;
+
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden; /* <-- critical for Safari */
+    }
+
+    .card-front{
+      background: linear-gradient(180deg, var(--cardTop), var(--cardBot));
+      color: var(--cardText);
+      display:flex; flex-direction:column; justify-content:space-between;
+      padding: 10px 10px 8px;
+    }
+
+    /* Neon “sheen” on front (neon theme only) */
+    body[data-theme="neon"] .card-front::before{
+      content:"";
+      position:absolute; inset:-40px -60px auto -60px;
+      height: 120px;
+      transform: rotate(-10deg);
+      background: linear-gradient(90deg, rgba(0,245,255,.0), rgba(0,245,255,.25), rgba(255,43,214,.20), rgba(255,43,214,0));
+      filter: blur(2px);
+      opacity:.85;
+      pointer-events:none;
+    }
+
+    /* Back of card */
+    .card-back{
+      transform: rotateY(180deg) translateZ(1px);
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      overflow: hidden;
+
+      /* CHROME SURFACE */
+      background:
+        /* sharp specular highlight */
+        linear-gradient(110deg,
+          rgba(255,255,255,0) 0%,
+          rgba(255,255,255,.65) 18%,
+          rgba(255,255,255,.95) 26%,
+          rgba(180,220,255,.55) 34%,
+          rgba(255,255,255,.25) 42%,
+          rgba(0,0,0,0) 60%
+        ),
+        /* cold reflection band */
+        linear-gradient(290deg,
+          rgba(0,245,255,.18),
+          rgba(0,0,0,0) 55%
+        ),
+        /* dark mirror base */
+        linear-gradient(180deg,
+          #0a0f14,
+          #05080c
+        );
+
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.35),
+        inset 0 -1px 0 rgba(0,0,0,.65),
+        0 0 14px rgba(0,245,255,.18);
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+
+
+
+
+    /* Metallic sheen overlay (keeps back fully opaque) */
+    .card-back::before{
+      content:"";
+      position:absolute;
+      inset:-40px -60px auto -60px;
+      height: 140px;
+      transform: rotate(-12deg);
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,.18) 18%,
+        rgba(0,245,255,.18) 38%,
+        rgba(255,43,214,.16) 58%,
+        rgba(255,255,255,.10) 74%,
+        rgba(255,255,255,0) 100%
+      );
+      filter: blur(1.8px);
+      opacity: .9;
+      pointer-events:none;
+    }
+
+    /* Brushed metal micro-texture */
+    .card-back::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius: 16px;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(255,255,255,.03) 0px,
+          rgba(255,255,255,.03) 2px,
+          rgba(0,0,0,0) 4px,
+          rgba(0,0,0,0) 7px
+        );
+      mix-blend-mode: overlay;
+      opacity: .35;
+      pointer-events:none;
+    }
+
+
+
+    .back-text{
+      font-weight: 1000;
+      letter-spacing: .6px;
+      text-transform: lowercase;
+      text-align:center;
+      line-height: 1.05;
+      font-size: 16px;
+      color: rgba(255,255,255,.92);
+      text-shadow:
+        0 0 10px rgba(0,245,255,.35),
+        0 0 18px rgba(255,43,214,.22);
+    }
+
+    .card-front,
+    .card-back{
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden; /* <-- also critical */
+    }
+
+    .card-front{ transform: rotateY(0deg) translateZ(1px); }
+    .card-back { transform: rotateY(180deg) translateZ(1px); }
+
+
+
+    /* Decorative neon border on back (neon theme only) */
+    body[data-theme="neon"] .card-back::after{
+      content:"";
+      position:absolute; inset:10px;
+      border-radius: 12px;
+      border: 2px solid rgba(0,245,255,.22);
+      box-shadow: 0 0 14px rgba(0,245,255,.18), 0 0 18px rgba(255,43,214,.14);
+      pointer-events:none;
+    }
+
+    .corner{ font-weight: 1000; font-size: 32px; letter-spacing: .3px; line-height:1; position:relative; z-index:1; }
+    .corner.small{ font-size: 24px; opacity:.95; }
+    .center{ display:flex; align-items:center; justify-content:center; font-size: 76px; font-weight: 1000; position:relative; z-index:1; }
+    .red{ color:#b00020; }
+    .black{ color:#111; }
+
+    .msg{
+      text-align:center;
+      font-weight: 900;
+      padding: 11px 12px;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 26px rgba(0,0,0,.25);
+    }
+    .msg strong{ color: var(--accent); text-shadow: 0 0 10px rgba(0,245,255,.25); }
+    .msg .good{ color: var(--good); }
+    .msg .bad{ color: var(--bad); }
+
+    details{
+      background: rgba(255,255,255,.05);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    summary{ cursor:pointer; font-weight: 900; }
+    .paytable{
+      margin-top: 10px;
+      display:grid;
+      grid-template-columns: 1fr repeat(5, auto);
+      gap: 6px 12px;
+      font-size: 13px;
+      color: var(--muted);
+      align-items:center;
+    }
+    .paytable .hdr{ color: var(--text); font-weight: 1000; opacity:.95; }
+    .paytable .rowname{ color: var(--text); font-weight: 900; }
+    .paytable .cell{ text-align:right; color: var(--text); font-weight: 900; }
+
+    footer{ text-align:center; color: rgba(255,255,255,.55); padding: 18px 10px; font-size:12px; }
+  </style>
+</head>
+
+<body data-theme="neon" class="phase-ready">
+<header>
+<h1 class="chrome-title">
+  <span class="chrome-text">Neon Video Poker</span>
+  <span class="badge">Jacks or Better</span>
+</h1>
+
+  <div class="stats">
+    <div class="pill">Credits: <strong id="bank">200</strong></div>
+    <div class="pill">Bet: <strong id="betLabel">1</strong> coin(s)</div>
+    <div class="pill">State: <strong id="stateLabel">Ready</strong></div>
+  </div>
+</header>
+
+<main>
+  <div class="panel">
+    <div class="row">
+      <div class="controls">
+        <button id="dealBtn" class="primary">Deal</button>
+        <button id="drawBtn" disabled>Draw</button>
+
+        <button id="betOneBtn">Bet One</button>
+        <button id="betMaxBtn" class="primary">Bet Max (5)</button>
+
+        <button id="themeBtn">Theme: Neon</button>
+        <button id="newBtn">New Credits</button>
+      </div>
+
+      <div class="hint">
+        Deal → click cards to <b>HOLD</b> (they flip) → Draw. Royal pays <b>4000</b> at 5 coins.
+      </div>
+    </div>
+
+    <div class="table">
+      <div class="hand" id="hand"></div>
+      <div class="msg" id="msg">Press <strong>Deal</strong> to start.</div>
+
+      <details open>
+        <summary>Paytable (1–5 coins)</summary>
+        <div class="paytable" id="paytable"></div>
+      </details>
+    </div>
+  </div>
+</main>
+
+<footer>Single-file game • No external assets • Click to hold.</footer>
+
+<script>
+(() => {
+  // ---------- Deck ----------
+  const SUITS = [
+    { sym: "♠", color: "black" },
+    { sym: "♥", color: "red" },
+    { sym: "♦", color: "red" },
+    { sym: "♣", color: "black" },
+  ];
+  const RANKS = [
+    { r: 2,  label: "2" }, { r: 3,  label: "3" }, { r: 4,  label: "4" }, { r: 5,  label: "5" },
+    { r: 6,  label: "6" }, { r: 7,  label: "7" }, { r: 8,  label: "8" }, { r: 9,  label: "9" },
+    { r: 10, label: "10" },{ r: 11, label: "J" },{ r: 12, label: "Q" },{ r: 13, label: "K" },
+    { r: 14, label: "A" },
+  ];
+
+  function shuffle(arr){
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function makeDeck(){
+    const deck = [];
+    for (const s of SUITS) for (const rk of RANKS) deck.push({ rank: rk.r, label: rk.label, suit: s.sym, color: s.color });
+    return shuffle(deck);
+  }
+
+  // ---------- Paytable (Jacks or Better) ----------
+  // Credits returned for bet size 1..5 (Royal includes 4000 at 5 coins)
+  const PAY = [
+    { key: "royal_flush",    name: "Royal Flush",      coins: [250, 500, 750, 1000, 4000] },
+    { key: "straight_flush", name: "Straight Flush",   coins: [50, 100, 150, 200, 250] },
+    { key: "four_kind",      name: "Four of a Kind",   coins: [25, 50, 75, 100, 125] },
+    { key: "full_house",     name: "Full House",       coins: [9, 18, 27, 36, 45] },
+    { key: "flush",          name: "Flush",            coins: [6, 12, 18, 24, 30] },
+    { key: "straight",       name: "Straight",         coins: [4, 8, 12, 16, 20] },
+    { key: "three_kind",     name: "Three of a Kind",  coins: [3, 6, 9, 12, 15] },
+    { key: "two_pair",       name: "Two Pair",         coins: [2, 4, 6, 8, 10] },
+    { key: "jacks_better",   name: "Jacks or Better",  coins: [1, 2, 3, 4, 5] },
+  ];
+  const PAYMAP = Object.fromEntries(PAY.map(p => [p.key, p]));
+
+  function countByRank(cards){
+    const m = new Map();
+    for (const c of cards) m.set(c.rank, (m.get(c.rank) || 0) + 1);
+    return [...m.entries()].sort((a,b)=> b[1]-a[1] || b[0]-a[0]);
+  }
+
+  function isFlush(cards){
+    const s = cards[0].suit;
+    return cards.every(c => c.suit === s);
+  }
+
+  function straightHigh(uniqueRanksDesc){
+    const r = uniqueRanksDesc.slice().sort((a,b)=>b-a);
+    if (r.length !== 5) return null;
+    if (r[0] === 14 && r[1] === 5 && r[2] === 4 && r[3] === 3 && r[4] === 2) return 5; // wheel
+    for (let i=0;i<4;i++) if (r[i] - 1 !== r[i+1]) return null;
+    return r[0];
+  }
+
+  function evaluate(cards){
+    const ranksDesc = cards.map(c=>c.rank).sort((a,b)=>b-a);
+    const uniqueDesc = [...new Set(ranksDesc)];
+    const flush = isFlush(cards);
+    const straightH = straightHigh(uniqueDesc);
+    const groups = countByRank(cards);
+
+    if (flush && straightH) {
+      const minRank = Math.min(...uniqueDesc);
+      if (straightH === 14 && minRank === 10) return { key:"royal_flush", name: PAYMAP.royal_flush.name };
+      return { key:"straight_flush", name: PAYMAP.straight_flush.name };
+    }
+    if (groups[0][1] === 4) return { key:"four_kind", name: PAYMAP.four_kind.name };
+    if (groups[0][1] === 3 && groups[1][1] === 2) return { key:"full_house", name: PAYMAP.full_house.name };
+    if (flush) return { key:"flush", name: PAYMAP.flush.name };
+    if (straightH) return { key:"straight", name: PAYMAP.straight.name };
+    if (groups[0][1] === 3) return { key:"three_kind", name: PAYMAP.three_kind.name };
+    if (groups[0][1] === 2 && groups[1][1] === 2) return { key:"two_pair", name: PAYMAP.two_pair.name };
+    if (groups[0][1] === 2) {
+      const pairRank = groups[0][0];
+      if (pairRank >= 11) return { key:"jacks_better", name: PAYMAP.jacks_better.name };
+    }
+    return { key:"no_win", name:"No Win" };
+  }
+
+  // ---------- UI / state ----------
+  const $ = (id) => document.getElementById(id);
+
+  const handEl = $("hand");
+  const msgEl = $("msg");
+  const bankEl = $("bank");
+  const betLabelEl = $("betLabel");
+  const stateEl = $("stateLabel");
+
+  const dealBtn = $("dealBtn");
+  const drawBtn = $("drawBtn");
+  const betOneBtn = $("betOneBtn");
+  const betMaxBtn = $("betMaxBtn");
+  const themeBtn = $("themeBtn");
+  const newBtn = $("newBtn");
+
+  const paytableEl = $("paytable");
+
+  function setBodyPhaseClass(phase){
+    document.body.classList.remove("phase-ready","phase-dealt");
+    document.body.classList.add(phase === "ready" ? "phase-ready" : "phase-dealt");
+  }
+
+  function renderPaytable(){
+    paytableEl.innerHTML = "";
+    const hdr1 = document.createElement("div"); hdr1.className="hdr"; hdr1.textContent="Hand";
+    paytableEl.appendChild(hdr1);
+    for (let c=1;c<=5;c++){
+      const h = document.createElement("div");
+      h.className="hdr";
+      h.textContent = c + "c";
+      h.style.textAlign="right";
+      paytableEl.appendChild(h);
+    }
+    for (const row of PAY){
+      const rn = document.createElement("div"); rn.className="rowname"; rn.textContent = row.name;
+      paytableEl.appendChild(rn);
+      for (let i=0;i<5;i++){
+        const cell = document.createElement("div");
+        cell.className="cell";
+        cell.textContent = String(row.coins[i]);
+        paytableEl.appendChild(cell);
+      }
+    }
+  }
+
+  let deck = makeDeck();
+  let hand = [];
+  let held = [false,false,false,false,false]; // true = hold (flip)
+  let phase = "ready"; // ready | dealt
+  let bank = 200;      // credits
+  let bet = 1;         // 1..5
+
+  function setPhase(p){
+    phase = p;
+    stateEl.textContent = p === "ready" ? "Ready" : "Hold cards";
+    dealBtn.disabled = (p !== "ready");
+    drawBtn.disabled = (p !== "dealt");
+    betOneBtn.disabled = (p !== "ready");
+    betMaxBtn.disabled = (p !== "ready");
+    setBodyPhaseClass(p);
+  }
+
+  function renderTop(){
+    bankEl.textContent = String(bank);
+    betLabelEl.textContent = String(bet);
+  }
+
+  function ensureDeck(n){
+    if (deck.length < n) deck = makeDeck();
+  }
+
+  function cardNode(card, idx){
+    const wrap = document.createElement("div");
+    wrap.className = `card selectable ${held[idx] ? "held" : ""}`;
+    wrap.setAttribute("role","button");
+    wrap.setAttribute("tabindex","0");
+    wrap.setAttribute("aria-label", `Card ${card.label}${card.suit} ${held[idx] ? "held" : "not held"}`);
+
+    const inner = document.createElement("div");
+    inner.className = "card-inner";
+
+    const front = document.createElement("div");
+    front.className = `card-face card-front ${card.color}`;
+
+    const top = document.createElement("div");
+    top.className = "corner";
+    top.textContent = card.label;
+
+    const center = document.createElement("div");
+    center.className = "center";
+    center.textContent = card.suit;
+
+    const bot = document.createElement("div");
+    bot.className = "corner small";
+    bot.style.textAlign = "right";
+    bot.textContent = card.label;
+
+    front.append(top, center, bot);
+
+    const back = document.createElement("div");
+    back.className = "card-face card-back";
+
+    //  no text on card back --pure metallic neon
+    //const backText = document.createElement("div");
+    //backText.className = "back-text";
+    //backText.textContent = "neon video poker";
+    //back.appendChild(backText);
+
+    inner.append(front, back);
+    wrap.appendChild(inner);
+
+    const toggleHold = () => {
+      if (phase !== "dealt") return;
+      held[idx] = !held[idx];
+      renderHand();
+      msgEl.innerHTML = `Discarding: <strong>${held.filter(Boolean).length}</strong> — press <strong>Draw</strong>.`;
+
+    };
+
+    wrap.addEventListener("click", toggleHold);
+    wrap.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleHold(); }
+    });
+
+    return wrap;
+  }
+
+  function renderHand(){
+    handEl.innerHTML = "";
+    if (!hand.length){
+      const t = document.createElement("div");
+      t.className = "hint";
+      t.textContent = "No cards yet.";
+      handEl.appendChild(t);
+      return;
+    }
+    hand.forEach((c,i)=> handEl.appendChild(cardNode(c,i)));
+  }
+
+  function deal(){
+    if (bank < bet){
+      msgEl.innerHTML = `<span class="bad">Not enough credits</span> to bet <strong>${bet}</strong>. Press <strong>New Credits</strong>.`;
+      return;
+    }
+
+    bank -= bet;
+    renderTop();
+
+    deck = makeDeck();
+    hand = [];
+    held = [false,false,false,false,false];
+    ensureDeck(5);
+    for (let i=0;i<5;i++) hand.push(deck.pop());
+
+    setPhase("dealt");
+    renderHand();
+    msgEl.innerHTML = `Click cards to <strong>DISCARD</strong> (they flip), then press <strong>Draw</strong>.`;
+
+  }
+
+function draw(){
+  // Flipped (held[i] === true) means DISCARD => replace those cards
+  for (let i = 0; i < 5; i++){
+    if (held[i]) {               // <-- flipped = selected = replace
+      ensureDeck(1);
+      hand[i] = deck.pop();
+    }
+  }
+
+  // Clear selections so final hand is face-up
+  held = [false,false,false,false,false];
+
+  renderHand();
+
+  const res = evaluate(hand);
+  let win = 0;
+  if (res.key !== "no_win"){
+    win = PAYMAP[res.key].coins[bet - 1];
+  }
+  bank += win;
+  renderTop();
+
+  msgEl.innerHTML = (win > 0)
+    ? `<span class="good">${res.name}</span> — you won <strong>${win}</strong> credits!`
+    : `<span class="bad">No Win</span> — deal again.`;
+
+  setPhase("ready");
+}
+
+  function betOne(){
+    bet = (bet % 5) + 1;
+    renderTop();
+    msgEl.innerHTML = `Bet set to <strong>${bet}</strong> coin(s).`;
+  }
+
+  function betMax(){
+    bet = 5;
+    renderTop();
+    msgEl.innerHTML = `Bet set to <strong>5</strong> coin(s) — Royal pays <strong>4000</strong> credits.`;
+  }
+
+  function toggleTheme(){
+    const body = document.body;
+    const cur = body.getAttribute("data-theme") || "neon";
+    const next = (cur === "neon") ? "classic" : "neon";
+    body.setAttribute("data-theme", next);
+    themeBtn.textContent = "Theme: " + (next === "neon" ? "Neon" : "Classic");
+  }
+
+  function newCredits(){
+    bank = 200;
+    bet = 1;
+    hand = [];
+    held = [false,false,false,false,false];
+    deck = makeDeck();
+    renderTop();
+    renderHand();
+    setPhase("ready");
+    msgEl.innerHTML = `Credits reset. Press <strong>Deal</strong>.`;
+  }
+
+  dealBtn.addEventListener("click", deal);
+  drawBtn.addEventListener("click", draw);
+  betOneBtn.addEventListener("click", betOne);
+  betMaxBtn.addEventListener("click", betMax);
+  themeBtn.addEventListener("click", toggleTheme);
+  newBtn.addEventListener("click", newCredits);
+
+  renderPaytable();
+  renderTop();
+  renderHand();
+  setPhase("ready");
+  themeBtn.textContent = "Theme: Neon";
+})();
+</script>
+</body>
+</html>
