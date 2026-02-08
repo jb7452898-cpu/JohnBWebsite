@@ -137,7 +137,7 @@
     }
 
     body[data-theme="neon"] .chrome-text::after{
-      animation: titleSweep 4.5s ease-in-out infinite;
+      animation: none; /*titleSweep 4.5s ease-in-out infinite;*/
     }
 
 
@@ -161,12 +161,6 @@
       box-shadow: 0 18px 60px rgba(0,0,0,.28);
     }
 
-    /* Neon pulse animation */
-    @keyframes neonPulse {
-      0%   { transform: translateY(0) scale(1);   filter: brightness(1);   box-shadow: 0 10px 34px rgba(0,0,0,.38), 0 0 0 rgba(0,245,255,0); }
-      50%  { transform: translateY(-1px) scale(1.02); filter: brightness(1.08); box-shadow: 0 14px 40px rgba(0,0,0,.42), 0 0 18px rgba(0,245,255,.35), 0 0 28px rgba(255,43,214,.22); }
-      100% { transform: translateY(0) scale(1);   filter: brightness(1);   box-shadow: 0 10px 34px rgba(0,0,0,.38), 0 0 0 rgba(0,245,255,0); }
-    }
 
     /* Subtle ambient neon shimmer on the hand area (neon theme only) */
     @keyframes ambientGlow {
@@ -174,6 +168,57 @@
       50%{ box-shadow: 0 0 22px rgba(0,245,255,.12), 0 0 34px rgba(255,43,214,.10); }
       100%{ box-shadow: 0 0 0 rgba(0,245,255,0), 0 0 0 rgba(255,43,214,0); }
     }
+
+    /* ===== NEON FRAME PULSE ===== */
+    @keyframes neonPulse {
+      0% {
+        opacity: .85;
+        filter:
+          drop-shadow(0 0 10px rgba(0,245,255,.45))
+          drop-shadow(0 0 18px rgba(255,43,214,.30))
+          drop-shadow(0 0 28px rgba(0,245,255,.22));
+      }
+
+      50% {
+        opacity: 1;
+        filter:
+          drop-shadow(0 0 18px rgba(0,245,255,.85))
+          drop-shadow(0 0 32px rgba(255,43,214,.60))
+          drop-shadow(0 0 48px rgba(255,255,255,.28));
+      }
+
+      100% {
+        opacity: .85;
+        filter:
+          drop-shadow(0 0 10px rgba(0,245,255,.45))
+          drop-shadow(0 0 18px rgba(255,43,214,.30))
+          drop-shadow(0 0 28px rgba(0,245,255,.22));
+      }
+    }
+
+
+    /* Animate frame ONLY when winning */
+      body.win-active .neon-frame{
+        animation: neonFrameSpin 3.5s linear infinite;
+      }
+
+      body.win-small .neon-frame{
+        animation-duration: 4.5s;
+      }
+
+      body.win-big .neon-frame{
+        animation-duration: 3s;
+      }
+
+      body.win-mega .neon-frame{
+        animation-duration: 1.8s;
+        filter:
+          drop-shadow(0 0 16px rgba(0,245,255,.75))
+          drop-shadow(0 0 28px rgba(255,43,214,.55))
+          drop-shadow(0 0 44px rgba(255,255,255,.25));
+      }
+
+
 
     .row{
       display:flex;
@@ -270,9 +315,22 @@
     }
 
     .card-front{
-      background: linear-gradient(180deg, var(--cardTop), var(--cardBot));
-      color: var(--cardText);
-      display:flex; flex-direction:column; justify-content:space-between;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(0,245,255,.22), rgba(0,0,0,0) 42%),
+        radial-gradient(circle at 82% 28%, rgba(255,43,214,.18), rgba(0,0,0,0) 46%),
+        linear-gradient(180deg, #0b1620, #050a10); /* SAME family as background */
+
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 16px;
+
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.18),
+        inset 0 -1px 0 rgba(0,0,0,.55),
+        0 0 14px rgba(0,245,255,.18);
+
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
       padding: 10px 10px 8px;
     }
 
@@ -388,6 +446,46 @@
         0 0 18px rgba(255,43,214,.22);
     }
 
+        /* ===== WIN HIGHLIGHTS ===== */
+    .card-inner.win{
+      box-shadow: 0 18px 40px rgba(0,0,0,.40), var(--glow);
+    }
+
+    .card-inner.win.tier-small{
+      box-shadow:
+        0 18px 40px rgba(0,0,0,.38),
+        0 0 10px rgba(0,245,255,.18),
+        0 0 14px rgba(255,43,214,.12);
+    }
+
+    .card-inner.win.tier-big{
+      box-shadow:
+        0 18px 44px rgba(0,0,0,.42),
+        0 0 14px rgba(0,245,255,.28),
+        0 0 20px rgba(255,43,214,.18);
+    }
+
+    .card-inner.win.tier-mega{
+      box-shadow:
+        0 20px 54px rgba(0,0,0,.48),
+        0 0 18px rgba(0,245,255,.40),
+        0 0 28px rgba(255,43,214,.26),
+        0 0 40px rgba(255,255,255,.12);
+    }
+
+    /* brighten black suits only when this card is winning */
+    .card-inner.win .card-front.black{
+      filter: brightness(1.18) contrast(1.12);
+      text-shadow:
+        0 0 5px rgba(0,245,255,.25),
+        0 0 10px rgba(255,43,214,.18);
+    }
+
+    /* heat shimmer only when this card is winning red */
+    .card-inner.win .card-front.red{ position: relative; }
+    .card-inner.win .card-front.red::after{ /* your shimmer overlay as-is */ }
+
+
     .card-front,
     .card-back{
       backface-visibility: hidden;
@@ -412,8 +510,46 @@
     .corner{ font-weight: 1000; font-size: 32px; letter-spacing: .3px; line-height:1; position:relative; z-index:1; }
     .corner.small{ font-size: 24px; opacity:.95; }
     .center{ display:flex; align-items:center; justify-content:center; font-size: 76px; font-weight: 1000; position:relative; z-index:1; }
-    .red{ color:#b00020; }
-    .black{ color:#111; }
+    .red{
+      color: #ff3b5f;
+      text-shadow:
+        0 0 6px rgba(255,59,95,.45),
+        0 0 12px rgba(255,59,95,.25);
+        }
+
+    .black{
+      background:
+        linear-gradient(
+          180deg,
+          #e6edf5 0%,     /* sharp chrome highlight */
+          #b8c6d6 16%,
+          #7b8fa6 28%,
+          #3e556c 45%,    /* drop quickly into dark 3e556c */
+          #1f3246 65%,    /*1f3246*/
+          #132535 82%,    /*132535*/
+          #0b1620 100%    /* SAME depth as card face 0b1620 */
+        );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+
+      /* restrained glow so darkness stays dark */
+      text-shadow:
+        0 0 3px rgba(0,245,255,.18),
+        0 0 6px rgba(255,43,214,.12);
+
+      filter: brightness(.78) contrast(1); /*.88 , 1.08*/
+
+    }
+
+
+    .corner,
+    .center{
+      text-shadow:
+        0 1px 0 rgba(255,255,255,.85),
+        0 -1px 0 rgba(0,0,0,.25);
+    }
+
 
     .msg{
       text-align:center;
@@ -449,10 +585,138 @@
     .paytable .cell{ text-align:right; color: var(--text); font-weight: 900; }
 
     footer{ text-align:center; color: rgba(255,255,255,.55); padding: 18px 10px; font-size:12px; }
+
+    /* ===== Animated Neon Cabinet Frame ===== */
+    .neon-frame{
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999; /* sits above everything */
+
+      /* thickness of the border */
+      padding: 16px;
+
+      /* we draw the border using background clipped to the padding-box */
+      background:
+        /* animated multi-stop gradient "tube" */
+        conic-gradient(
+          from 0deg,
+          rgba(0,245,255,1),
+          rgba(255,43,214,1),
+          rgba(255,215,0,1),
+          rgba(0,255,160,1),
+          rgba(0,245,255,1)
+        ) border-box;
+
+      /* carve out the center */
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+
+      border-radius: 22px;
+
+      /* glow */
+      filter:
+        drop-shadow(0 0 10px rgba(0,245,255,.55))
+        drop-shadow(0 0 18px rgba(255,43,214,.35))
+        drop-shadow(0 0 28px rgba(0,245,255,.25));
+
+      opacity: .9;
+    }
+
+    /* Inner “glass” rim so it feels like a real cabinet */
+    .neon-frame::before{
+      content:"";
+      position:absolute;
+      inset: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,.35),
+        inset 0 0 18px rgba(0,245,255,.10),
+        inset 0 0 18px rgba(255,43,214,.08);
+    }
+
+    /* Animation: rotate + hue shift so colors "travel" around the page */
+    @keyframes neonFrameSpin{
+      0%   { transform: rotate(0deg);   filter: hue-rotate(0deg)   drop-shadow(0 0 10px rgba(0,245,255,.55)) drop-shadow(0 0 18px rgba(255,43,214,.35)) drop-shadow(0 0 28px rgba(0,245,255,.25)); }
+      50%  { transform: rotate(180deg); filter: hue-rotate(120deg) drop-shadow(0 0 12px rgba(0,245,255,.55)) drop-shadow(0 0 22px rgba(255,43,214,.35)) drop-shadow(0 0 34px rgba(0,245,255,.25)); }
+      100% { transform: rotate(360deg); filter: hue-rotate(240deg) drop-shadow(0 0 10px rgba(0,245,255,.55)) drop-shadow(0 0 18px rgba(255,43,214,.35)) drop-shadow(0 0 28px rgba(0,245,255,.25)); }
+    }
+
+    /* Only animate in neon theme (optional) */
+    body[data-theme="neon"] .neon-frame{
+      animation: neonFrameSpin 7s linear infinite;
+    }
+
+    /* If you want a calmer look on classic theme */
+    body[data-theme="classic"] .neon-frame{
+      opacity: .35;
+      filter: none;
+    }
+
+    .neon-frame{
+      animation: none !important;
+      transform: none !important;
+    }
+
+    body.win-active .neon-frame{
+      animation: neonFrameSpin 3.5s linear infinite !important;
+    }
+
+        body.win-small .neon-frame{ animation-duration: 4.5s !important; }
+    body.win-big   .neon-frame{ animation-duration: 3s !important; }
+    body.win-mega  .neon-frame{ animation-duration: 1.8s !important; }
+
+
+      /* Stationary frame by default */
+    body:not(.win-active) .neon-frame{
+      animation: none !important;
+      opacity: .9;
+    }
+
+    /* Pulse on ANY win */
+    body.win-active .neon-frame{
+      animation: neonPulse 1.6s ease-in-out infinite !important;
+      opacity: 1;
+    }
+
+    body.win-small .neon-frame{
+      animation-duration: 1.8s !important;
+    }
+
+    body.win-big .neon-frame{
+      animation-duration: 1.2s !important;
+    }
+
+    body.win-mega .neon-frame{
+      animation-duration: .75s !important;
+    }
+
+/* default: no border animation */
+.neon-frame{
+  animation: none !important;
+}
+
+/* pulse only when winning */
+body.win-active .neon-frame{
+  animation: neonPulse 1.6s ease-in-out infinite !important;
+}
+
+/* tier speed */
+body.win-small .neon-frame{ animation-duration: 1.8s !important; }
+body.win-big   .neon-frame{ animation-duration: 1.2s !important; }
+body.win-mega  .neon-frame{ animation-duration: .75s !important; }
+
+
   </style>
 </head>
 
 <body data-theme="neon" class="phase-ready">
+<div class="neon-frame" aria-hidden="true"></div>
+
 <header>
 <h1 class="chrome-title">
   <span class="chrome-text">Neon Video Poker</span>
@@ -500,7 +764,9 @@
 <footer>Single-file game • No external assets • Click to hold.</footer>
 
 <script>
-(() => {
+
+
+  var win = 0;
   // ---------- Deck ----------
   const SUITS = [
     { sym: "♠", color: "black" },
@@ -588,6 +854,58 @@
     return { key:"no_win", name:"No Win" };
   }
 
+  function tierForKey(key){
+  if (key === "royal_flush" || key === "straight_flush" || key === "four_kind") return "mega";
+  if (key === "full_house" || key === "flush" || key === "straight") return "big";
+  if (key === "three_kind" || key === "two_pair" || key === "jacks_better") return "small";
+  return "none";
+}
+
+function computeWinMask(cards, key){
+  const mask = [false,false,false,false,false];
+  const ranks = cards.map(c => c.rank);
+
+  const idxByRank = (r) => ranks.map((x,i)=> x===r ? i : -1).filter(i=>i>=0);
+
+  // Hands that use all 5 cards
+  if (key === "royal_flush" || key === "straight_flush" || key === "straight" || key === "flush" || key === "full_house") {
+    return [true,true,true,true,true];
+  }
+
+  // Count ranks
+  const counts = new Map();
+  for (const r of ranks) counts.set(r, (counts.get(r) || 0) + 1);
+  const groups = [...counts.entries()].sort((a,b)=> b[1]-a[1] || b[0]-a[0]); // [rank,count]
+
+  if (key === "four_kind"){
+    const quadRank = groups.find(g => g[1] === 4)?.[0];
+    if (quadRank != null) idxByRank(quadRank).forEach(i => mask[i] = true);
+    return mask;
+  }
+
+  if (key === "three_kind"){
+    const tripRank = groups.find(g => g[1] === 3)?.[0];
+    if (tripRank != null) idxByRank(tripRank).forEach(i => mask[i] = true);
+    return mask;
+  }
+
+  if (key === "two_pair"){
+    const pairs = groups.filter(g => g[1] === 2).map(g => g[0]);
+    for (const pr of pairs) idxByRank(pr).forEach(i => mask[i] = true);
+    return mask;
+  }
+
+  if (key === "jacks_better"){
+    const pairRank = groups.find(g => g[1] === 2)?.[0];
+    if (pairRank != null) idxByRank(pairRank).forEach(i => mask[i] = true);
+    return mask;
+  }
+
+  return mask; // no win => none highlighted
+}
+
+
+
   // ---------- UI / state ----------
   const $ = (id) => document.getElementById(id);
 
@@ -605,11 +923,11 @@
   const newBtn = $("newBtn");
 
   const paytableEl = $("paytable");
+function setBodyPhaseClass(p){
+  document.body.classList.remove("phase-ready", "phase-dealt");
+  document.body.classList.add(p === "ready" ? "phase-ready" : "phase-dealt");
+}
 
-  function setBodyPhaseClass(phase){
-    document.body.classList.remove("phase-ready","phase-dealt");
-    document.body.classList.add(phase === "ready" ? "phase-ready" : "phase-dealt");
-  }
 
   function renderPaytable(){
     paytableEl.innerHTML = "";
@@ -641,15 +959,21 @@
   let bank = 200;      // credits
   let bet = 1;         // 1..5
 
-  function setPhase(p){
-    phase = p;
-    stateEl.textContent = p === "ready" ? "Ready" : "Hold cards";
-    dealBtn.disabled = (p !== "ready");
-    drawBtn.disabled = (p !== "dealt");
-    betOneBtn.disabled = (p !== "ready");
-    betMaxBtn.disabled = (p !== "ready");
-    setBodyPhaseClass(p);
-  }
+  let winMask = [false,false,false,false,false]; // which cards get highlighted
+  let winTier = "none"; // none | small | big | mega
+
+function setPhase(p){
+  phase = p;
+
+  stateEl.textContent = (p === "ready") ? "Ready" : "Hold cards";
+
+  dealBtn.disabled = (p !== "ready");
+  drawBtn.disabled = (p !== "dealt");
+  betOneBtn.disabled = (p !== "ready");
+  betMaxBtn.disabled = (p !== "ready");
+
+  setBodyPhaseClass(p);
+}
 
   function renderTop(){
     bankEl.textContent = String(bank);
@@ -661,17 +985,30 @@
   }
 
   function cardNode(card, idx){
+    // Wrapper (this controls click + flip state). In your current UX:
+    // held[idx] === true means "DISCARD" (flipped)
     const wrap = document.createElement("div");
     wrap.className = `card selectable ${held[idx] ? "held" : ""}`;
     wrap.setAttribute("role","button");
     wrap.setAttribute("tabindex","0");
-    wrap.setAttribute("aria-label", `Card ${card.label}${card.suit} ${held[idx] ? "held" : "not held"}`);
+    wrap.setAttribute(
+      "aria-label",
+      `Card ${card.label}${card.suit} ${held[idx] ? "selected to discard" : "kept"}`
+    );
 
+    // Inner (this is where we attach win/tier classes so card sizing never changes)
     const inner = document.createElement("div");
     inner.className = "card-inner";
 
+    // Add win classes safely (only if the globals exist and this card is in the win mask)
+    if (Array.isArray(winMask) && winMask[idx] && winTier && winTier !== "none") {
+      inner.classList.add("win", `tier-${winTier}`);
+    }
+
+    // Front face (IMPORTANT: do NOT add .black/.red to the container,
+    // since your .black uses background-clip:text and can make everything transparent)
     const front = document.createElement("div");
-    front.className = `card-face card-front ${card.color}`;
+    front.className = "card-face card-front";
 
     const top = document.createElement("div");
     top.className = "corner";
@@ -686,31 +1023,46 @@
     bot.style.textAlign = "right";
     bot.textContent = card.label;
 
+    top.classList.add(card.color);
+    center.classList.add(card.color);
+    bot.classList.add(card.color);
+
+
+    // Apply suit color styling to TEXT only
+    top.classList.add(card.color);    // "red" or "black"
+    center.classList.add(card.color);
+    bot.classList.add(card.color);
+
     front.append(top, center, bot);
 
+    // Back face (chrome/metallic lives in your CSS .card-back)
     const back = document.createElement("div");
     back.className = "card-face card-back";
 
-    //  no text on card back --pure metallic neon
-    //const backText = document.createElement("div");
-    //backText.className = "back-text";
-    //backText.textContent = "neon video poker";
-    //back.appendChild(backText);
+    // If you previously added a separate neon border element, you can keep it:
+    // const neonBorder = document.createElement("div");
+    // neonBorder.className = "neon-border";
+    // back.appendChild(neonBorder);
 
+    // Assemble
     inner.append(front, back);
     wrap.appendChild(inner);
 
-    const toggleHold = () => {
+    // Click/keyboard: toggle discard selection (flip)
+    const toggleDiscard = () => {
       if (phase !== "dealt") return;
       held[idx] = !held[idx];
       renderHand();
-      msgEl.innerHTML = `Discarding: <strong>${held.filter(Boolean).length}</strong> — press <strong>Draw</strong>.`;
-
+      msgEl.innerHTML =
+        `Discarding: <strong>${held.filter(Boolean).length}</strong> — press <strong>Draw</strong>.`;
     };
 
-    wrap.addEventListener("click", toggleHold);
+    wrap.addEventListener("click", toggleDiscard);
     wrap.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleHold(); }
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleDiscard();
+      }
     });
 
     return wrap;
@@ -729,6 +1081,9 @@
   }
 
   function deal(){
+    // Clear any leftover win animation classes before starting a new hand
+  document.body.classList.remove("win-active","win-small","win-big","win-mega");
+
     if (bank < bet){
       msgEl.innerHTML = `<span class="bad">Not enough credits</span> to bet <strong>${bet}</strong>. Press <strong>New Credits</strong>.`;
       return;
@@ -740,6 +1095,9 @@
     deck = makeDeck();
     hand = [];
     held = [false,false,false,false,false];
+    winMask = [false,false,false,false,false];
+    winTier = "none";
+
     ensureDeck(5);
     for (let i=0;i<5;i++) hand.push(deck.pop());
 
@@ -750,20 +1108,28 @@
   }
 
 function draw(){
-  // Flipped (held[i] === true) means DISCARD => replace those cards
+  // Replace DISCARDED cards (your current UX: flipped/selected cards are discards)
   for (let i = 0; i < 5; i++){
-    if (held[i]) {               // <-- flipped = selected = replace
+    if (held[i]) {
       ensureDeck(1);
       hand[i] = deck.pop();
     }
   }
 
-  // Clear selections so final hand is face-up
+  // Clear selections so the final hand shows face-up
   held = [false,false,false,false,false];
 
+  // Evaluate the final hand
+  const res = evaluate(hand);
+
+  // Win tier + which specific cards should glow (safe fallbacks)
+  winTier = (typeof tierForKey === "function") ? tierForKey(res.key) : "none";
+  winMask = (typeof computeWinMask === "function") ? computeWinMask(hand, res.key) : [false,false,false,false,false];
+
+  // Render the final hand with win highlights applied
   renderHand();
 
-  const res = evaluate(hand);
+  // Pay winnings
   let win = 0;
   if (res.key !== "no_win"){
     win = PAYMAP[res.key].coins[bet - 1];
@@ -771,11 +1137,25 @@ function draw(){
   bank += win;
   renderTop();
 
+  // Message
   msgEl.innerHTML = (win > 0)
     ? `<span class="good">${res.name}</span> — you won <strong>${win}</strong> credits!`
     : `<span class="bad">No Win</span> — deal again.`;
 
+  // Ready for next hand (do this BEFORE adding win classes if your phase system touches body classes)
   setPhase("ready");
+
+  // Pulse the neon frame ONLY on wins
+  document.body.classList.remove("win-active","win-small","win-big","win-mega");
+
+  if (win > 0) {
+    const safeTier = (winTier && winTier !== "none") ? winTier : "small";
+    document.body.classList.add("win-active", `win-${safeTier}`);
+
+    setTimeout(() => {
+      document.body.classList.remove("win-active","win-small","win-big","win-mega");
+    }, (safeTier === "mega") ? 4200 : (safeTier === "big") ? 3000 : 2200);
+  }
 }
 
   function betOne(){
@@ -821,8 +1201,12 @@ function draw(){
   renderTop();
   renderHand();
   setPhase("ready");
+
+
+
+
   themeBtn.textContent = "Theme: Neon";
-})();
+
 </script>
 </body>
 </html>
