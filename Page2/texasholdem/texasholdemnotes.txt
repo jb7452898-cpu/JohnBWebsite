@@ -1,0 +1,33 @@
+# texas holdem notes
+
+put a "Go Home" button on the player dashboard
+
+
+
+If you want the CPUs to feel more “poker-like,” the next upgrades that make a big difference are:
+
+Real side-pot handling (so uneven all-ins pay correctly)
+
+Better AI: pot odds, position, and a little randomized bluffing
+
+Bet sizing UI (quick buttons: 1/2 pot, pot, all-in) and hand history panel
+
+
+created random names for the cpus
+
+tie names to play styles
+
+give certain names tells
+
+or even keep a session history like “River Rat up +320 chips tonight”
+more names:  el capitan
+commodore
+dragonslayer69
+yo mama
+linux_master
+vic_20
+Mr Coleco Vision
+Trash_80
+
+
+

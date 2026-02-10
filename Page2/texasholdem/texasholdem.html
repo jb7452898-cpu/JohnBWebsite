@@ -1,0 +1,1941 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Texas Hold'em (8 players)</title>
+<style>
+  :root{
+    --felt:#000;
+    --felt2:#000;
+    --panel: rgba(255,255,255,.06);
+    --panel2: rgba(255,255,255,.08);
+    --ring: rgba(255,255,255,.14);
+    --muted: rgba(255,255,255,.72);
+    --ink:#111;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: radial-gradient(1200px 700px at 50% 35%, #0a0a0a, #000);
+    color:white;
+    overflow:hidden;
+  }
+  #table{ position:relative; width:100vw; height:100vh; }
+
+  .seat{
+    position:absolute;
+    min-width:240px;
+    max-width:340px;
+    padding:10px 12px;
+    border-radius:18px;
+    background: var(--panel);
+    outline: 1px solid var(--ring);
+    backdrop-filter: blur(6px);
+  }
+
+  /* --- Tighten cards slightly so seats take less vertical space --- */
+  .hand{ display:flex; gap:8px; min-height:48px; align-items:center; }
+  .card{
+    width:38px;
+    height:52px;
+    border-radius:10px;
+    background: linear-gradient(#fff, #f0f0f0);
+    color: var(--ink);
+    display:grid;
+    place-items:center;
+    font-weight:800;
+    box-shadow: 0 8px 18px rgba(0,0,0,.25);
+    user-select:none;
+  }
+
+  .card{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    0 6px 14px rgba(0,0,0,.55);
+  }
+
+
+  /* Center board: smaller and higher so it doesn’t collide with mid/bottom seats */
+  #center{
+    position:absolute;
+    left:50%;
+    top:44%;                 /* was 50% */
+    transform: translate(-50%,-50%);
+    width: min(640px, 90vw); /* was 860px */
+    padding:10px 12px;       /* smaller */
+    border-radius:18px;
+    background: var(--panel2);
+    outline: 1px solid var(--ring);
+    backdrop-filter: blur(6px);
+    text-align:center;
+  }
+  #center h1{
+    margin:0 0 8px 0;
+    font-size:14px;          /* smaller */
+    font-weight:700;
+    color: rgba(255,255,255,.9);
+    letter-spacing:.3px;
+  }
+  #board{
+    display:flex;
+    justify-content:center;
+    gap:8px;                 /* tighter */
+    min-height:56px;         /* smaller */
+    margin-bottom:8px;
+  }
+
+  /* Shrink HUD pills */
+  #hud{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:6px;
+  }
+  .pill{
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+    padding:6px 10px;        /* smaller */
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    outline: 1px solid var(--ring);
+    color: rgba(255,255,255,.9);
+    font-size:11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Make log less tall so center stays compact */
+  .log{
+    margin-top:8px;
+    max-height:84px;         /* was 120px */
+    overflow:auto;
+    text-align:left;
+    font-size:11px;
+    color: rgba(255,255,255,.86);
+    padding:8px 10px;
+    border-radius:14px;
+    background: rgba(255,255,255,.05);
+    outline: 1px solid rgba(255,255,255,.10);
+  }
+
+  /* Action bar: narrower, lower, and closer to the human seat; avoids bottom CPUs */
+  #actionBar{
+    position:absolute;
+    left:50%;
+    bottom:86px;                 /* was 110px */
+    transform: translateX(-50%);
+    width: min(680px, 92vw);     /* was 820px */
+    padding:8px 10px;            /* smaller */
+    border-radius:16px;
+    background: rgba(255,255,255,.06);
+    outline: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(6px);
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+  }
+  button{
+    border:none;
+    border-radius:999px;
+    padding:8px 12px;            /* smaller */
+    background: rgba(255,255,255,.92);
+    color:#111;
+    font-weight:750;
+    cursor:pointer;
+    box-shadow: 0 10px 18px rgba(0,0,0,.20);
+  }
+  button.secondary{
+    background: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.92);
+    outline: 1px solid rgba(255,255,255,.18);
+    box-shadow:none;
+  }
+  .raiseBox{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    padding:5px 8px;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    outline: 1px solid rgba(255,255,255,.14);
+  }
+  input[type="range"]{ width:180px; } /* smaller */
+
+  /* --- Seat positions (give the middle more empty space) --- */
+  #cpu0{ left:3%;  top:4%; }
+  #cpu1{ left:50%; top:3%; transform:translateX(-50%); }
+  #cpu2{ right:3%; top:4%; }
+
+  /* Move mid seats a bit UP so center panel doesn’t overlap them */
+  #cpu3{ left:2%;  top:33%; }     /* was 38% */
+  #cpu4{ right:2%; top:33%; }     /* was 38% */
+
+  #cpu5{ left:3%;  bottom:4%; }
+  #cpu6{ right:3%; bottom:4%; }
+
+  /* Human seat stays put */
+  #human{
+    left:50%;
+    bottom:2.5%;
+    transform:translateX(-50%);
+    min-width:360px;
+    background: rgba(255,255,255,.07);
+    outline: 1px solid rgba(255,255,255,.18);
+  }
+
+  /* Keep footer note from getting too prominent on black */
+  #footerNote{
+    position:absolute;
+    left:10px;
+    bottom:10px;
+    font-size:11px;
+    color: rgba(255,255,255,.45);
+    max-width: 520px;
+  }
+
+  /* =========================================================
+   RESPONSIVE "NO-OVERLAP" OVERRIDES
+   Paste at END of your <style> to override existing rules
+   ========================================================= */
+
+/* Black background / minimal panels */
+:root{
+  --felt:#000;
+  --felt2:#000;
+  --panel: rgba(255,255,255,.06);
+  --panel2: rgba(255,255,255,.08);
+  --ring: rgba(255,255,255,.14);
+  --muted: rgba(255,255,255,.72);
+  --ink:#111;
+
+  /* Fluid sizing */
+  --cardW: clamp(28px, 3.8vw, 42px);
+  --cardH: clamp(40px, 5.1vw, 56px);
+  --seatPad: clamp(8px, 1.3vw, 12px);
+  --seatW: clamp(200px, 24vw, 340px);
+
+  /* Center panel / action bar */
+  --centerW: min(680px, 92vw);
+  --actionW: min(680px, 92vw);
+
+  /* Vertical spacing helpers */
+  --centerTop: 44%;                 /* default center height */
+  --actionBottom: clamp(72px, 11vh, 96px);  /* how high the action bar sits */
+}
+
+/* Background */
+body{
+  background: radial-gradient(1200px 700px at 50% 35%, #0a0a0a, #000) !important;
+}
+
+/* Seats become fluid (so they shrink on smaller screens) */
+.seat{
+  min-width: var(--seatW) !important;
+  max-width: var(--seatW) !important;
+  padding: var(--seatPad) !important;
+  background: var(--panel) !important;
+  outline: 1px solid var(--ring) !important;
+}
+
+/* Cards become fluid */
+.card{
+  width: var(--cardW) !important;
+  height: var(--cardH) !important;
+}
+.hand{
+  min-height: calc(var(--cardH) + 2px) !important;
+}
+
+/* Center board: fluid + slightly higher */
+#center{
+  width: var(--centerW) !important;
+  top: var(--centerTop) !important;
+  padding: clamp(8px, 1.2vw, 12px) !important;
+  border-radius: 18px !important;
+  background: var(--panel2) !important;
+  outline: 1px solid var(--ring) !important;
+}
+#center h1{
+  font-size: clamp(12px, 1.6vw, 14px) !important;
+  margin-bottom: 6px !important;
+}
+#board{
+  gap: clamp(6px, 1vw, 10px) !important;
+  min-height: calc(var(--cardH) + 6px) !important;
+  margin-bottom: 6px !important;
+}
+
+/* HUD pills shrink nicely */
+.pill{
+  padding: 6px 10px !important;
+  font-size: clamp(10px, 1.2vw, 12px) !important;
+  background: rgba(255,255,255,.06) !important;
+  outline: 1px solid var(--ring) !important;
+}
+
+/* Log compresses by default */
+.log{
+  max-height: clamp(56px, 12vh, 90px) !important;
+  font-size: 11px !important;
+  background: rgba(255,255,255,.05) !important;
+  outline: 1px solid rgba(255,255,255,.10) !important;
+}
+
+/* Action bar becomes fluid + narrower and higher */
+#actionBar{
+  width: var(--actionW) !important;
+  bottom: var(--actionBottom) !important;
+  padding: 8px 10px !important;
+  background: rgba(255,255,255,.06) !important;
+  outline: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 16px !important;
+}
+#actionBar button{
+  padding: 8px 12px !important;
+}
+#actionBar input[type="range"]{
+  width: clamp(140px, 18vw, 200px) !important;
+}
+
+/* Give the middle row more room by nudging them slightly upward */
+#cpu3{ top: 33% !important; }  /* mid-left */
+#cpu4{ top: 33% !important; }  /* mid-right */
+
+/* =========================================================
+   BREAKPOINTS: short screens
+   ========================================================= */
+
+/* Short-ish screens: shrink center + action bar a bit more */
+@media (max-height: 820px){
+  :root{
+    --centerTop: 42%;
+    --centerW: min(620px, 92vw);
+    --actionW: min(620px, 92vw);
+    --actionBottom: clamp(66px, 10vh, 86px);
+  }
+
+  /* Make seats a hair smaller */
+  :root{ --seatW: clamp(190px, 24vw, 320px); }
+
+  /* Nudge middle seats slightly up */
+  #cpu3{ top: 31% !important; }
+  #cpu4{ top: 31% !important; }
+}
+
+/* Very short screens: hide log (big overlap culprit), compress everything */
+@media (max-height: 720px){
+  :root{
+    --centerTop: 40%;
+    --centerW: min(560px, 94vw);
+    --actionW: min(560px, 94vw);
+    --actionBottom: clamp(58px, 9vh, 78px);
+
+    --cardW: clamp(26px, 3.6vw, 38px);
+    --cardH: clamp(38px, 4.8vw, 52px);
+    --seatW: clamp(175px, 23vw, 300px);
+  }
+
+  .log{ display:none !important; }
+  #hud{ gap: 6px !important; }
+  .pill{ padding: 5px 9px !important; }
+}
+
+/* Extreme short screens: make action bar even narrower to avoid bottom CPUs */
+@media (max-height: 640px){
+  :root{
+    --centerTop: 38%;
+    --centerW: min(520px, 96vw);
+    --actionW: min(520px, 96vw);
+    --actionBottom: 52px;
+  }
+
+  /* tighten gaps */
+  #board{ gap: 6px !important; }
+  #actionBar{ gap: 6px !important; }
+}
+
+/* =========================================================
+   BREAKPOINTS: narrow screens
+   ========================================================= */
+
+@media (max-width: 920px){
+  :root{
+    --seatW: clamp(180px, 28vw, 300px);
+    --centerW: min(600px, 94vw);
+    --actionW: min(600px, 94vw);
+  }
+
+  /* Pull bottom corner CPUs slightly inward so they don't collide with action bar width */
+  #cpu5{ left: 2% !important; }
+  #cpu6{ right: 2% !important; }
+}
+
+/* Really narrow phones: seats slimmer, action bar narrower, center higher */
+@media (max-width: 720px){
+  :root{
+    --seatW: clamp(160px, 40vw, 260px);
+    --centerTop: 39%;
+    --centerW: min(520px, 96vw);
+    --actionW: min(520px, 96vw);
+  }
+
+  /* Let action bar wrap more tightly */
+  #actionBar{ justify-content:center !important; }
+}
+
+/* =========================================================
+   CENTER-STACKED CONTROLS (Board + Actions)
+   25% narrower, action bar directly below board
+   ========================================================= */
+
+/* Shrink center + action widths by ~25% */
+:root{
+  --centerW: min(510px, 90vw);     /* ~25% smaller than 680 */
+  --actionW: min(510px, 90vw);
+}
+
+/* Dealer / board panel */
+#center{
+  top: 40% !important;            /* slightly higher to make room */
+  width: var(--centerW) !important;
+  padding: clamp(8px, 1.1vw, 10px) !important;
+}
+
+/* Make board cards slightly tighter */
+#board{
+  gap: clamp(5px, 0.9vw, 8px) !important;
+}
+
+/* Action bar sits just under board, not near bottom */
+#actionBar{
+  position: absolute;
+  left: 50%;
+  top: calc(40% + 110px);          /* directly under #center */
+  transform: translateX(-50%);
+  width: var(--actionW) !important;
+  bottom: auto !important;
+
+  padding: 7px 9px !important;
+  gap: 6px !important;
+}
+
+/* Shrink action controls slightly */
+#actionBar button{
+  padding: 7px 11px !important;
+  font-size: 13px;
+}
+#actionBar input[type="range"]{
+  width: clamp(120px, 16vw, 180px) !important;
+}
+
+/* Shrink HUD pills a bit more */
+.pill{
+  padding: 5px 9px !important;
+  font-size: 11px !important;
+}
+
+/* =========================================================
+   Short screen adjustments
+   ========================================================= */
+
+@media (max-height: 760px){
+  #center{
+    top: 38% !important;
+  }
+  #actionBar{
+    top: calc(38% + 102px) !important;
+  }
+}
+
+@media (max-height: 680px){
+  #center{
+    top: 36% !important;
+  }
+  #actionBar{
+    top: calc(36% + 96px) !important;
+  }
+}
+
+/* =========================================================
+   Very narrow screens
+   ========================================================= */
+
+@media (max-width: 720px){
+  :root{
+    --centerW: min(460px, 94vw);
+    --actionW: min(460px, 94vw);
+  }
+
+  #center{ top: 37% !important; }
+  #actionBar{ top: calc(37% + 98px) !important; }
+}
+
+
+/* =========================================================
+   INVERTED CARD THEME
+   Black cards, white outlines, white text
+   ========================================================= */
+
+/* Base card */
+.card{
+  background: #000 !important;
+  color: #fff !important;
+  border: 1.5px solid rgba(255,255,255,.85);
+  box-shadow: 0 6px 14px rgba(0,0,0,.55);
+}
+
+/* Red suits (still red, but muted) */
+.card.red{
+  color: #ff5a5a !important;
+}
+
+/* Card backs */
+.card.back{
+  background: #000 !important;
+  color: #fff !important;
+  border: 1.5px solid rgba(255,255,255,.85);
+  font-weight: 900;
+}
+.card.back{
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #000,
+      #000 6px,
+      #0c0c0c 6px,
+      #0c0c0c 12px
+    ) !important;
+}
+
+
+/* Empty placeholder cards on board */
+#board .card.back{
+  color: transparent !important;
+  border: 1.5px solid rgba(255,255,255,.35);
+  background: rgba(0,0,0,.6) !important;
+}
+
+/* Slight hover polish (optional but nice) */
+.card:hover{
+  transform: translateY(-1px);
+}
+
+/* Tighten card edges on very small screens */
+@media (max-height: 720px){
+  .card{
+    border-width: 1.2px;
+  }
+}
+
+/* =========================================================
+   FULL VIBE: flip + deal + winner glow + burn animation
+   Paste at END of <style>
+   ========================================================= */
+
+#deckBurnRow{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin: 4px 0 8px;
+}
+.pile{
+  width: 34px;
+  height: 46px;
+  border-radius: 10px;
+  background: #000;
+  border: 1.5px solid rgba(255,255,255,.65);
+  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+  opacity:.85;
+  position:relative;
+}
+.pile::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:8px;
+  border: 1px dashed rgba(255,255,255,.18);
+}
+
+/* ---- Inverted card theme (front + back) ---- */
+.card{ /* becomes the FLIP container now */
+  perspective: 800px;
+  width: var(--cardW, 42px);
+  height: var(--cardH, 56px);
+  border-radius: 10px;
+  user-select:none;
+}
+
+/* inner rotator */
+.card .inner{
+  width:100%;
+  height:100%;
+  border-radius: 10px;
+  position:relative;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(.2,.9,.2,1);
+  box-shadow: 0 10px 18px rgba(0,0,0,.35);
+}
+
+/* faces */
+.card .face{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  border-radius:10px;
+  backface-visibility:hidden;
+
+  background:#000;
+  color:#fff;
+  border: 0.5px solid rgba(255,255,255,.85);
+}
+
+/* back face */
+.card .backFace{
+  transform: rotateY(180deg);
+  background:#000;
+  color:#fff;
+}
+/* Slightly dim CPU facedown cards (must be LAST) */
+.card:not(.flipped) .backFace{
+  opacity: .9;
+  filter: brightness(.52);
+
+}
+
+.card .inner{
+  transform-style: preserve-3d;
+  transform: rotateY(180deg); /* default = BACK showing */
+  transition: transform 520ms cubic-bezier(.2,.9,.2,1);
+}
+
+.card.flipped .inner{
+  transform: rotateY(0deg);   /* flipped = FRONT showing */
+}
+
+
+/* suit coloring */
+.card.red .frontFace{
+  color: #ff5a5a;
+}
+
+/* placeholders on board (empty) */
+.card.placeholder .face{
+  border-color: rgba(255,255,255,.28);
+  background: rgba(0,0,0,.45);
+  color: transparent;
+}
+
+/* ---- Deal animation (stagger-friendly) ---- */
+@keyframes dealPop{
+  from{ opacity:0; transform: translateY(-10px) scale(.96); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+.card.dealt{
+  animation: dealPop 260ms ease-out both;
+}
+
+/* ---- Winner glow ---- */
+@keyframes winnerPulse{
+  0%   { outline-color: rgba(255,255,255,.25); box-shadow: 0 0 0 rgba(255,255,255,0); }
+  50%  { outline-color: rgba(255,255,255,.7);  box-shadow: 0 0 26px rgba(255,255,255,.20); }
+  100% { outline-color: rgba(255,255,255,.25); box-shadow: 0 0 0 rgba(255,255,255,0); }
+}
+.seat.winner{
+  animation: winnerPulse 1.2s ease-in-out infinite;
+}
+.seat.winner .card .face{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    0 12px 26px rgba(255,255,255,.10);
+}
+
+/* ---- Burn card flying animation ---- */
+#burnFly{
+  position: absolute;
+  width: 34px;
+  height: 46px;
+  border-radius: 10px;
+  background:#000;
+  border: 1.5px solid rgba(255,255,255,.85);
+  z-index: 9999;
+  pointer-events:none;
+  box-shadow: 0 12px 26px rgba(0,0,0,.55);
+  transform: translate(-50%,-50%);
+  opacity: 0;
+}
+@keyframes burnMove{
+  0%   { opacity:0; transform: translate(-50%,-50%) scale(.96); }
+  10%  { opacity:1; }
+  100% { opacity:1; transform: translate(-50%,-50%) scale(1); }
+}
+
+/* tighter on very small screens */
+@media (max-height: 720px){
+  #deckBurnRow{ margin: 2px 0 6px; }
+  .pile{ width: 30px; height: 42px; }
+}
+
+/* =========================================================
+   NUDGE CENTER + ACTION BAR DOWN (CLEAN SPACING PASS)
+   ========================================================= */
+
+/* Global vertical adjustment knob */
+:root{
+  --centerTop: 50%;        /* was ~40% , 43%*/
+  --actionOffset: 50px;  /* distance below center panel  118px */
+}
+
+/* Dealer / Board panel */
+#center{
+  top: var(--centerTop) !important;
+}
+
+/* Action bar follows center, slightly lower */
+#actionBar{
+  top: calc(var(--centerTop) + var(--actionOffset)) !important;
+}
+
+/* Pull action bar closer to player seat */
+#actionBar{
+  margin-bottom: -6px; /* subtle pull-down without breaking layout */
+}
+
+/* =========================================================
+   Short screen safety adjustments
+   ========================================================= */
+
+@media (max-height: 760px){
+  :root{
+    --centerTop: 41%;
+    --actionOffset: 110px;
+  }
+}
+
+@media (max-height: 680px){
+  :root{
+    --centerTop: 39%;
+    --actionOffset: 102px;
+  }
+}
+
+@media (max-height: 620px){
+  :root{
+    --centerTop: 37%;
+    --actionOffset: 96px;
+  }
+}
+
+/* Cut play-by-play (log) height roughly in half */
+.log{
+  max-height: 45px !important;   /* was ~90px in compact mode */
+}
+
+
+</style>
+
+</head>
+
+<body>
+  <div id="table">
+    <!-- CPU seats -->
+    <div class="seat" id="cpu0" data-seat="1"><div class="row">
+      <div class="name">CPU 1</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <div class="seat" id="cpu1" data-seat="2"><div class="row">
+      <div class="name">CPU 2</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <div class="seat" id="cpu2" data-seat="3"><div class="row">
+      <div class="name">CPU 3</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <div class="seat" id="cpu3" data-seat="4"><div class="row">
+      <div class="name">CPU 4</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <div class="seat" id="cpu4" data-seat="5"><div class="row">
+      <div class="name">CPU 5</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <div class="seat" id="cpu5" data-seat="6"><div class="row">
+      <div class="name">CPU 6</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <div class="seat" id="cpu6" data-seat="7"><div class="row">
+      <div class="name">CPU 7</div>
+      <div class="badges" data-badges></div>
+    </div><div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div><div class="hand" data-hand></div></div>
+
+    <!-- Human seat -->
+    <div class="seat" id="human" data-seat="0">
+      <div class="row">
+        <div class="name"><strong>You</strong></div>
+        <div class="badges" data-badges></div>
+      </div>
+      <div class="row"><div class="stack" data-stack></div><div class="bet" data-bet></div></div>
+      <div class="hand" data-hand></div>
+    </div>
+
+    <!-- Center -->
+    <div id="center">
+      <h1>Dealer / Board</h1>
+      <div id="deckBurnRow">
+  <div class="pile" id="deckPile" title="Deck"></div>
+  <div class="pile" id="burnPile" title="Burn"></div>
+</div>
+
+      <div id="board"></div>
+
+      <div id="hud">
+        <span class="pill">Street: <span id="street">—</span></span>
+        <span class="pill">Pot: <span id="pot">0</span></span>
+        <span class="pill">To Call: <span id="toCall">0</span></span>
+        <span class="pill">SB/BB: <span id="blinds">10/20</span></span>
+        <span class="pill">Hand #: <span id="handNo">1</span></span>
+      </div>
+
+      <div class="log" id="log"></div>
+    </div>
+
+    <!-- Action bar -->
+    <div id="actionBar">
+      <button id="btnFold">Fold</button>
+      <button id="btnCheckCall">Check</button>
+
+      <div class="raiseBox">
+        <span style="font-size:12px;color:rgba(255,255,255,.9)">Raise:</span>
+        <input id="raiseSlider" type="range" min="0" max="0" value="0" />
+        <span class="badge" id="raiseAmt">0</span>
+      </div>
+      <button id="btnRaise">Raise</button>
+      <button class="secondary" id="btnNextHand">Next Hand</button>
+    </div>
+
+    <div id="footerNote">
+      Note: side pots are simplified (best for equal-ish stacks). If you want true side-pot logic, tell me and I’ll extend it.
+    </div>
+  </div>
+
+<script>
+/* -----------------------------
+   Core cards + deck
+------------------------------ */
+const SUITS = ["♠","♥","♦","♣"];
+const RANKS = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+const RANK_VALUE = Object.fromEntries(RANKS.map((r,i)=>[r, i+2])); // 2..14
+
+const CPU_NAME_POOL = [
+  "Ace Ventura",
+  "Big Slick",
+  "River Rat",
+  "Dead Button",
+  "Chip Magnet",
+  "Lucky Lefty",
+  "Cold Deck",
+  "Stack Attack",
+  "Tilt Machine",
+  "Pocket Rockets",
+  "The Grinder",
+  "Snap Call",
+  "Donk Slayer",
+  "Stone Face",
+  "The Nit",
+  "Bad Beat Bob",
+  "Check-Raise",
+  "All-In Annie",
+  "River Queen",
+
+  "El Capitan",
+  "Commodore_16",
+  "DragonSlayer_69",
+  "Vic_20",
+  "Mr Coleco Vision",
+  "Trash_80"
+
+];  //  had "The Dealer" as a name but took it out  too confusing
+
+function pickCpuNames(){
+  const shuffled = [...CPU_NAME_POOL];
+  shuffle(shuffled);          // reuse your existing shuffle()
+  return shuffled.slice(0, 7);
+}
+
+
+function makeDeck(){
+  const d = [];
+  for(const s of SUITS){
+    for(const r of RANKS) d.push({r,s});
+  }
+  return d;
+}
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function isRedSuit(s){ return s==="♥" || s==="♦"; }
+function cardLabel(c){ return `${c.r}${c.s}`; }
+
+/* -----------------------------
+   UI helpers
+------------------------------ */
+function $(sel){ return document.querySelector(sel); }
+function clearNode(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+
+function renderCard(face, {back=false, placeholder=false, dealtDelay=0} = {}){
+  // Outer container
+  const outer = document.createElement("div");
+  outer.className = "card";
+
+  if(placeholder){
+    outer.classList.add("placeholder");
+  }
+
+  const inner = document.createElement("div");
+  inner.className = "inner";
+
+  const front = document.createElement("div");
+  front.className = "face frontFace";
+  front.textContent = placeholder ? "" : face;
+
+  const backFace = document.createElement("div");
+  backFace.className = "face backFace";
+  backFace.textContent = ""; /*"🂠"*/
+
+  // suit coloring for front
+  const suit = face?.slice(-1);
+  if(suit === "♥" || suit === "♦") outer.classList.add("red");
+
+  inner.appendChild(front);
+  inner.appendChild(backFace);
+  outer.appendChild(inner);
+
+  // Flip logic:
+  // - If back=true, keep hidden (NOT flipped)
+  // - If back=false, show face (flipped)
+  if(!back && !placeholder) outer.classList.add("flipped");
+
+  // Deal animation
+  outer.classList.add("dealt");
+  outer.style.animationDelay = `${dealtDelay}ms`;
+
+  return outer;
+}
+
+function animateBurn(){
+  const deck = $("#deckPile");
+  const burn = $("#burnPile");
+  if(!deck || !burn) return;
+
+  const a = deck.getBoundingClientRect();
+  const b = burn.getBoundingClientRect();
+
+  const fly = document.createElement("div");
+  fly.id = "burnFly";
+  document.body.appendChild(fly);
+
+  const startX = a.left + a.width/2;
+  const startY = a.top + a.height/2;
+  const endX   = b.left + b.width/2;
+  const endY   = b.top + b.height/2;
+
+  fly.style.left = `${startX}px`;
+  fly.style.top  = `${startY}px`;
+  fly.style.opacity = "0";
+  fly.style.animation = "burnMove 260ms ease-out forwards";
+
+  // animate movement using WAAPI for smoothness
+  fly.animate([
+    { left: `${startX}px`, top: `${startY}px` },
+    { left: `${endX}px`,   top: `${endY}px` }
+  ], { duration: 260, easing: "ease-out", fill: "forwards" });
+
+  setTimeout(()=> fly.remove(), 320);
+}
+
+
+
+function seatElByIndex(i){
+  if(i===0) return $("#human");
+  return $(`#cpu${i-1}`);
+}
+function seatName(i){
+  if(i === 0) return "You";
+  return (state.cpuNames && state.cpuNames[i - 1]) ? state.cpuNames[i - 1] : `CPU ${i}`;
+}
+
+function log(msg){
+  const box = $("#log");
+  const line = document.createElement("div");
+  line.textContent = msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function scheduleLoop(){
+  setTimeout(() => {
+    try { runGameLoop(); }
+    catch (err) {
+      console.error(err);
+      log(`❌ LOOP ERROR: ${err.message}`);
+      state.handOver = true;
+      if (typeof endHandUI === "function") endHandUI();
+      renderAll();
+    }
+  }, 30);
+}
+
+
+/* -----------------------------
+   Hand evaluator (7 cards -> best 5)
+   Returns {cat, tiebreak: number[], desc}
+   Higher cat wins; if tie compare tiebreak lexicographically.
+   Categories:
+   8 Straight Flush
+   7 Four of a Kind
+   6 Full House
+   5 Flush
+   4 Straight
+   3 Three of a Kind
+   2 Two Pair
+   1 One Pair
+   0 High Card
+------------------------------ */
+
+function evaluate7(cards){
+  // Convert to ranks/suits
+  const ranks = cards.map(c=>RANK_VALUE[c.r]).sort((a,b)=>b-a);
+  const suits = cards.map(c=>c.s);
+
+  // Count ranks
+  const count = new Map();
+  for(const r of ranks) count.set(r, (count.get(r)||0)+1);
+
+  // Group ranks by count
+  const groups = [...count.entries()]
+    .map(([r,c])=>({r,c}))
+    .sort((a,b)=> (b.c-a.c) || (b.r-a.r));
+
+  // Flush?
+  const suitCount = new Map();
+  for(const s of suits) suitCount.set(s, (suitCount.get(s)||0)+1);
+  const flushSuit = [...suitCount.entries()].find(([s,c])=>c>=5)?.[0] || null;
+  const flushCards = flushSuit ? cards.filter(c=>c.s===flushSuit).map(c=>RANK_VALUE[c.r]).sort((a,b)=>b-a) : null;
+
+  // Straight helper (ranks array may include duplicates)
+  function bestStraight(rankVals){
+    const uniq = [...new Set(rankVals)].sort((a,b)=>b-a);
+    // Wheel (A-5): treat Ace as 1
+    if(uniq.includes(14)) uniq.push(1);
+    let bestHigh = null;
+    let run = 1;
+    for(let i=0;i<uniq.length-1;i++){
+      if(uniq[i]-1===uniq[i+1]) run++;
+      else run=1;
+      if(run>=5){
+        bestHigh = uniq[i-3]; // when run==5, i-3 is high of the 5-card straight
+        // continue to see if higher? we iterate from high to low so first found is best
+        break;
+      }
+    }
+    return bestHigh; // 5..14 (or 5 for wheel)
+  }
+
+  const straightHigh = bestStraight(ranks);
+  const flushStraightHigh = flushCards ? bestStraight(flushCards) : null;
+
+  // Straight Flush
+  if(flushStraightHigh){
+    const high = flushStraightHigh;
+    return { cat:8, tiebreak:[high], desc: high===5 ? "Straight Flush (5-high)" : `Straight Flush (${highToRank(high)}-high)` };
+  }
+
+  // Four
+  if(groups[0]?.c===4){
+    const quad = groups[0].r;
+    const kicker = groups.filter(g=>g.r!==quad).map(g=>g.r).sort((a,b)=>b-a)[0];
+    return { cat:7, tiebreak:[quad,kicker], desc:`Four of a Kind (${highToRank(quad)}s)` };
+  }
+
+  // Full House
+  if(groups[0]?.c===3 && (groups[1]?.c>=2)){
+    const trips = groups[0].r;
+    const pair = groups.slice(1).filter(g=>g.c>=2).map(g=>g.r).sort((a,b)=>b-a)[0];
+    return { cat:6, tiebreak:[trips,pair], desc:`Full House (${highToRank(trips)}s full of ${highToRank(pair)}s)` };
+  }
+
+  // Flush
+  if(flushCards){
+    const top5 = flushCards.slice(0,5);
+    return { cat:5, tiebreak:top5, desc:`Flush (${highToRank(top5[0])}-high)` };
+  }
+
+  // Straight
+  if(straightHigh){
+    const high = straightHigh;
+    return { cat:4, tiebreak:[high], desc: high===5 ? "Straight (5-high)" : `Straight (${highToRank(high)}-high)` };
+  }
+
+  // Trips
+  if(groups[0]?.c===3){
+    const trips = groups[0].r;
+    const kickers = groups.filter(g=>g.r!==trips).map(g=>g.r).sort((a,b)=>b-a).slice(0,2);
+    return { cat:3, tiebreak:[trips,...kickers], desc:`Three of a Kind (${highToRank(trips)}s)` };
+  }
+
+  // Two Pair
+  if(groups[0]?.c===2 && groups[1]?.c===2){
+    const p1 = Math.max(groups[0].r, groups[1].r);
+    const p2 = Math.min(groups[0].r, groups[1].r);
+    const kicker = groups.filter(g=>g.c===1).map(g=>g.r).sort((a,b)=>b-a)[0];
+    return { cat:2, tiebreak:[p1,p2,kicker], desc:`Two Pair (${highToRank(p1)}s & ${highToRank(p2)}s)` };
+  }
+
+  // One Pair
+  if(groups[0]?.c===2){
+    const pair = groups[0].r;
+    const kickers = groups.filter(g=>g.r!==pair).map(g=>g.r).sort((a,b)=>b-a).slice(0,3);
+    return { cat:1, tiebreak:[pair,...kickers], desc:`One Pair (${highToRank(pair)}s)` };
+  }
+
+  // High Card
+  const top5 = [...new Set(ranks)].slice(0,5);
+  return { cat:0, tiebreak:top5, desc:`High Card (${highToRank(top5[0])})` };
+}
+
+function highToRank(v){
+  if(v===14) return "A";
+  if(v===13) return "K";
+  if(v===12) return "Q";
+  if(v===11) return "J";
+  return String(v);
+}
+
+function compareHands(a,b){
+  if(a.cat!==b.cat) return a.cat>b.cat ? 1 : -1;
+  const n = Math.max(a.tiebreak.length, b.tiebreak.length);
+  for(let i=0;i<n;i++){
+    const av = a.tiebreak[i] ?? 0;
+    const bv = b.tiebreak[i] ?? 0;
+    if(av!==bv) return av>bv ? 1 : -1;
+  }
+  return 0;
+}
+
+/* -----------------------------
+   Game state
+------------------------------ */
+const N = 8; // players 0..7 (0 is human)
+const state = {
+  handNo: 1,
+  sb: 10,
+  bb: 20,
+  dealer: 0,
+  street: "—", // Preflop/Flop/Turn/River/Showdown
+  deck: [],
+  board: [],
+  pot: 0,
+  toCall: 0,         // highest bet this street
+  lastAggressor: null,
+  players: [],
+  actionIndex: 0,
+  awaitingHuman: false,
+  handOver: true,
+  cpuNames: []
+
+};
+
+function makePlayers(){
+  const players = [];
+  for(let i=0;i<N;i++){
+    players.push({
+      id:i,
+      stack: 1500,
+      hole: [],
+      inHand: true,
+      allIn: false,
+      bet: 0,         // bet on current street
+      committed: 0    // total committed this hand (for simplified pot)
+    });
+  }
+  return players;
+}
+
+/* -----------------------------
+   Betting / turn order helpers
+------------------------------ */
+function nextActiveFrom(start){
+  for(let step=1; step<=N; step++){
+    const idx = (start+step)%N;
+    const p = state.players[idx];
+    if(p.inHand && !p.allIn && p.stack>0) return idx;
+  }
+  return null;
+}
+function countInHand(){
+  return state.players.filter(p=>p.inHand).length;
+}
+function countCanAct(){
+  return state.players.filter(p=>p.inHand && !p.allIn && p.stack>0).length;
+}
+function everyoneMatchedOrAllIn(){
+  // all players still in hand are either all-in or have bet == toCall
+  for(const p of state.players){
+    if(!p.inHand) continue;
+    if(p.allIn) continue;
+    if(p.bet !== state.toCall) return false;
+  }
+  return true;
+}
+function streetName(){
+  return state.street;
+}
+function setStreet(s){
+  state.street = s;
+  $("#street").textContent = s;
+}
+
+/* -----------------------------
+   Actions: bet/call/check/fold/raise
+------------------------------ */
+function putInPot(p, amount){
+  const a = Math.max(0, Math.min(amount, p.stack));
+  p.stack -= a;
+  p.bet += a;
+  p.committed += a;
+  state.pot += a;
+}
+function fold(p){
+  p.inHand = false;
+  log(`${seatName(p.id)} folds.`);
+}
+function call(p){
+  const need = state.toCall - p.bet;
+  if(need <= 0){
+    log(`${seatName(p.id)} checks.`);
+    return;
+  }
+  const pay = Math.min(need, p.stack);
+  putInPot(p, pay);
+  if(p.stack===0) p.allIn = true;
+  log(`${seatName(p.id)} calls ${pay}${p.allIn ? " (all-in)" : ""}.`);
+}
+function raiseTo(p, newToCall){
+  // newToCall is the total bet amount this street for this player
+  const add = newToCall - p.bet;
+  if(add <= 0) return;
+  const pay = Math.min(add, p.stack);
+  putInPot(p, pay);
+  if(p.bet > state.toCall) state.toCall = p.bet;
+  state.lastAggressor = p.id;
+  if(p.stack===0) p.allIn = true;
+  log(`${seatName(p.id)} raises to ${p.bet}${p.allIn ? " (all-in)" : ""}.`);
+}
+function check(p){
+  log(`${seatName(p.id)} checks.`);
+}
+
+/* -----------------------------
+   Dealing and hand flow
+------------------------------ */
+function draw(){
+  return state.deck.pop();
+}
+function resetBets(){
+  for(const p of state.players) p.bet = 0;
+  state.toCall = 0;
+  state.lastAggressor = null;
+}
+function burn(){
+  if(state.deck.length) state.deck.pop();
+  animateBurn();
+}
+function dealHole(){
+  for(const p of state.players) p.hole = [];
+  // deal starting from left of dealer (SB) but it doesn't matter visually
+  const start = (state.dealer + 1) % N;
+  for(let c=0;c<2;c++){
+    for(let i=0;i<N;i++){
+      const idx = (start+i)%N;
+      const pl = state.players[idx];
+      if(pl.stack>0){ pl.hole.push(draw()); }
+      else { pl.inHand=false; pl.allIn=false; }
+    }
+  }
+}
+function dealFlop(){ burn(); state.board.push(draw(), draw(), draw()); }
+function dealTurn(){ burn(); state.board.push(draw()); }
+function dealRiver(){ burn(); state.board.push(draw()); }
+
+function startNewHand(){
+  // If human busted, restart stacks for demo
+  if(state.players[0].stack<=0){
+    log("You are busted — restarting stacks to 1500 for demo.");
+    state.players = makePlayers();
+  }
+
+  for(let i=0;i<N;i++) seatElByIndex(i).classList.remove("winner");
+
+
+  // if some CPU busted, they sit out automatically
+  for(const p of state.players){
+    p.inHand = p.stack>0;
+    p.allIn = false;
+    p.hole = [];
+    p.bet = 0;
+    p.committed = 0;
+  }
+
+  state.deck = shuffle(makeDeck());
+  state.board = [];
+  state.pot = 0;
+  resetBets();
+  state.handOver = false;
+
+  // Move dealer button to next player who has chips
+  state.dealer = nextDealer();
+  log(`— Hand #${state.handNo} — Dealer: ${seatName(state.dealer)} —`);
+
+  // Deal
+  dealHole();
+  setStreet("Preflop");
+
+  // Post blinds
+  postBlinds();
+
+  // First action preflop: left of BB
+  const bb = bigBlindIndex();
+  const first = nextActiveFrom(bb);
+  state.actionIndex = first ?? bb;
+
+  renderAll();
+  runGameLoop();
+}
+
+function nextDealer(){
+  // advance until find player with chips
+  for(let step=1; step<=N; step++){
+    const idx = (state.dealer + step) % N;
+    if(state.players[idx].stack > 0) return idx;
+  }
+  return state.dealer;
+}
+function smallBlindIndex(){
+  // next player with chips after dealer
+  let idx = state.dealer;
+  for(let k=0;k<N;k++){
+    idx = (idx+1)%N;
+    if(state.players[idx].stack>0) return idx;
+  }
+  return (state.dealer+1)%N;
+}
+function bigBlindIndex(){
+  let idx = smallBlindIndex();
+  for(let k=0;k<N;k++){
+    idx = (idx+1)%N;
+    if(state.players[idx].stack>0) return idx;
+  }
+  return (smallBlindIndex()+1)%N;
+}
+function postBlinds(){
+  const sbIdx = smallBlindIndex();
+  const bbIdx = bigBlindIndex();
+  const sbP = state.players[sbIdx];
+  const bbP = state.players[bbIdx];
+
+  const sbPay = Math.min(state.sb, sbP.stack);
+  const bbPay = Math.min(state.bb, bbP.stack);
+
+  putInPot(sbP, sbPay);
+  if(sbP.stack===0) sbP.allIn=true;
+
+  putInPot(bbP, bbPay);
+  if(bbP.stack===0) bbP.allIn=true;
+
+  state.toCall = Math.max(sbP.bet, bbP.bet);
+  state.lastAggressor = bbIdx;
+
+  log(`${seatName(sbIdx)} posts SB ${sbPay}.`);
+  log(`${seatName(bbIdx)} posts BB ${bbPay}.`);
+}
+
+function advanceStreet(){
+  // If only one player left, end immediately
+  if(countInHand()<=1){
+    endHandByFolds();
+    return;
+  }
+
+  // Move bets into pot already tracked; just reset street bets
+  for(const p of state.players) p.bet = 0;
+  state.toCall = 0;
+  state.lastAggressor = null;
+
+  if(state.street==="Preflop"){
+    setStreet("Flop");
+    dealFlop();
+  } else if(state.street==="Flop"){
+    setStreet("Turn");
+    dealTurn();
+  } else if(state.street==="Turn"){
+    setStreet("River");
+    dealRiver();
+  } else if(state.street==="River"){
+    setStreet("Showdown");
+    showdown();
+    return;
+  }
+
+  // First action postflop: left of dealer
+  const first = nextActiveFrom(state.dealer);
+  state.actionIndex = first ?? state.dealer;
+
+  renderAll();
+  runGameLoop();
+}
+
+function endHandByFolds(){
+  const winner = state.players.find(p=>p.inHand);
+  if(!winner){
+    log("Hand ended unexpectedly (no winner).");
+    state.handOver = true;
+    return;
+  }
+  winner.stack += state.pot;
+  log(`${seatName(winner.id)} wins pot ${state.pot} (everyone folded).`);
+  state.pot = 0;
+  state.handOver = true;
+  renderAll();
+  endHandUI();
+}
+
+function showdown(){
+  // Reveal all CPU cards in UI
+  log("Showdown!");
+  const contenders = state.players.filter(p=>p.inHand);
+
+  const scored = contenders.map(p=>{
+    const seven = [...p.hole, ...state.board];
+    const ev = evaluate7(seven);
+    return {p, ev};
+  });
+
+  scored.sort((a,b)=>-compareHands(a.ev,b.ev));
+
+  const best = scored[0];
+  const winners = scored.filter(x=>compareHands(x.ev, best.ev)===0);
+
+  if(winners.length===1){
+    winners[0].p.stack += state.pot;
+    log(`${seatName(winners[0].p.id)} wins ${state.pot} with ${winners[0].ev.desc}.`);
+  } else {
+    // Split pot equally (simplified)
+    const share = Math.floor(state.pot / winners.length);
+    const remainder = state.pot - share*winners.length;
+    winners.forEach((w,i)=> w.p.stack += share + (i===0 ? remainder : 0));
+    log(`Split pot: ${winners.map(w=>seatName(w.p.id)).join(", ")} with ${best.ev.desc}. Each gets ${share}${remainder?` (+${remainder} to first)`:""}.`);
+  }
+
+  // Clear old winner marks
+  for(let i=0;i<N;i++) seatElByIndex(i).classList.remove("winner");
+
+  // Mark winners
+  winners.forEach(w => seatElByIndex(w.p.id).classList.add("winner"));
+
+  state.pot = 0;
+  state.handOver = true;
+
+  // Also log each hand
+  for(const s of scored){
+    log(`${seatName(s.p.id)} shows ${cardLabel(s.p.hole[0])} ${cardLabel(s.p.hole[1])} — ${s.ev.desc}`);
+  }
+
+  renderAll();
+  endHandUI();
+}
+
+/* -----------------------------
+   CPU decision-making (simple)
+   - Uses "strength hint" based on:
+     * preflop: pair/high cards/suited/connectors
+     * postflop: actual evaluated 7-card with unknowns? we use current best from (hole+board)
+   - Not GTO, but playable.
+------------------------------ */
+function preflopScore(p){
+  const [a,b] = p.hole;
+  const ra = RANK_VALUE[a.r], rb = RANK_VALUE[b.r];
+  const hi = Math.max(ra,rb), lo = Math.min(ra,rb);
+  const pair = ra===rb;
+  const suited = a.s===b.s;
+  const gap = Math.abs(ra-rb);
+  let s = 0;
+  if(pair) s += 12 + (hi-2)/2;         // pairs strong
+  s += (hi-8) * 0.9;                   // high card value
+  s += (lo-8) * 0.4;                   // second card
+  if(suited) s += 1.2;
+  if(gap===1) s += 1.0;
+  if(gap===0) s += 1.0;
+  if(gap>=4) s -= 0.8;
+  return s; // roughly -? to 20+
+}
+function postflopStrength(p){
+  const cards = [...p.hole, ...state.board];
+  const ev = evaluate7(cards);
+  // map cat -> base, plus kicker influence
+  const base = [1,3,5,7,9,11,13,15,17][ev.cat];
+  const kicker = (ev.tiebreak[0]||0)/14;
+  return base + kicker; // ~1..18
+}
+
+function cpuAct(p){
+  const need = state.toCall - p.bet;
+  const canCheck = need<=0;
+  const pot = state.pot;
+  const street = state.street;
+
+  // Determine a heuristic strength
+  const strength = (street==="Preflop") ? preflopScore(p) : postflopStrength(p);
+
+  // Some randomness
+  const noise = (Math.random()-0.5)*1.2;
+  const s = strength + noise;
+
+  // Decide aggression thresholds
+  // Higher s: more likely raise; low s: fold when facing bet.
+  const raiseThreshold = (street==="Preflop") ? 12 : 10;
+  const callThreshold  = (street==="Preflop") ? 6  : 7;
+
+  // If facing big bet relative to stack, tighten
+  const pressure = need / Math.max(1, p.stack + p.bet);
+  const tightened = pressure > 0.35 ? 2 : pressure > 0.2 ? 1 : 0;
+  const sAdj = s - tightened;
+
+  // Compute a "reasonable" raise-to (min raise = toCall + bb)
+  const minRaiseTo = state.toCall + Math.max(state.bb, state.toCall); // simple
+  const maxTo = p.bet + p.stack; // all-in cap
+
+  if(!canCheck){
+    if(sAdj < callThreshold){
+      // sometimes bluff-call small
+      if(need <= Math.max(state.bb, Math.floor(pot*0.12)) && Math.random()<0.2){
+        call(p);
+      } else {
+        fold(p);
+      }
+    } else if(sAdj < raiseThreshold || minRaiseTo > maxTo){
+      call(p);
+    } else {
+      // raise
+      let target = minRaiseTo;
+      // scale raise size
+      const bump = Math.floor((sAdj-raiseThreshold) * state.bb);
+      target = Math.min(maxTo, target + Math.max(0, bump));
+      // also cap to about pot-ish at times
+      const potRaiseCap = Math.min(maxTo, state.toCall + Math.max(state.bb, Math.floor(pot*0.75)));
+      if(target > potRaiseCap && Math.random()<0.6) target = potRaiseCap;
+      raiseTo(p, target);
+    }
+  } else {
+    // can check
+    if(sAdj >= raiseThreshold && minRaiseTo <= maxTo && Math.random()<0.65){
+      let target = Math.min(maxTo, minRaiseTo + Math.floor((sAdj-raiseThreshold)*state.bb));
+      raiseTo(p, target);
+    } else {
+      check(p);
+    }
+  }
+}
+
+/* -----------------------------
+   Main game loop
+------------------------------ */
+function runGameLoop(){
+  renderAll();
+
+  // Hand might have ended already
+  if(state.handOver){
+    setHumanControlsEnabled(false);
+    $("#btnNextHand").disabled = false;
+    return;
+  }
+
+  // If only one left, end now
+  if(countInHand()<=1){
+    endHandByFolds();
+    setHumanControlsEnabled(false);
+    $("#btnNextHand").disabled = false;
+    return;
+  }
+
+  // If no one can act (everyone all-in), just run out board to showdown
+  if(countCanAct()<=0){
+    log("All players are all-in — dealing remaining board.");
+    while(state.street!=="River" && state.street!=="Showdown"){
+      // advance street without betting
+      if(state.street==="Preflop"){ setStreet("Flop"); dealFlop(); }
+      else if(state.street==="Flop"){ setStreet("Turn"); dealTurn(); }
+      else if(state.street==="Turn"){ setStreet("River"); dealRiver(); }
+      renderAll();
+    }
+    setStreet("Showdown");
+    showdown();
+    return;
+  }
+
+  // If betting round complete, advance street
+  if(everyoneMatchedOrAllIn()){
+    // but if we just entered street with no actions yet, still need to let first player act unless toCall is 0 and everyone hasn't acted
+    // We'll track completion via "actedThisStreet" set.
+    if(state._actedThisStreet && state._actedThisStreet.size >= state.players.filter(p=>p.inHand && !p.allIn && p.stack>0).length){
+      state._actedThisStreet = null;
+      advanceStreet();
+      return;
+    }
+  }
+
+  // Ensure acted set exists
+  if(!state._actedThisStreet) state._actedThisStreet = new Set();
+
+  // Pick next actor that can act
+  let idx = state.actionIndex;
+  // if current idx can't act, move forward
+  if(!(state.players[idx].inHand && !state.players[idx].allIn && state.players[idx].stack>0)){
+    const nxt = nextActiveFrom(idx);
+    if(nxt===null){
+      // nobody can act
+      advanceStreet();
+      return;
+    }
+    idx = nxt;
+    state.actionIndex = idx;
+  }
+
+  const actor = state.players[idx];
+
+  // Highlight seat
+  highlightActive(idx);
+
+  // Human vs CPU
+  if(actor.id === 0){
+    state.awaitingHuman = true;
+    setHumanControlsEnabled(true);
+    updateActionBarLabels();
+  } else {
+    state.awaitingHuman = false;
+    setHumanControlsEnabled(false);
+    // CPU action immediately
+    cpuAct(actor);
+    state._actedThisStreet.add(actor.id);
+
+    // After action, set next index
+    const nxt = nextActiveFrom(actor.id);
+    state.actionIndex = (nxt===null) ? actor.id : nxt;
+
+    // If someone raised, betting continues (acted set should reset except raiser counts as acted)
+    // We detect raise by checking if actor.bet == toCall and toCall increased; easiest: track lastAggressor and reset acted on raise action
+    // We'll infer: if lastAggressor == actor.id and actor.bet == toCall and actor.bet>0 and (action was raise) we reset others' acted
+    // We'll do a simple flag based on log side effects? Better: store prevToCall before cpuAct.
+  }
+
+  renderAll();
+
+  // Continue loop until human needed or street advances
+  if(!state.awaitingHuman){
+    // If betting round now complete and everyone acted at least once, advance
+    if(everyoneMatchedOrAllIn()){
+      const needed = state.players.filter(p=>p.inHand && !p.allIn && p.stack>0).length;
+      if(state._actedThisStreet && state._actedThisStreet.size >= needed){
+        state._actedThisStreet = null;
+        advanceStreet();
+        return;
+      }
+    }
+    // Keep going
+    scheduleLoop();
+  return;
+
+  }
+}
+
+function highlightActive(activeId){
+  for(let i=0;i<N;i++){
+    const el = seatElByIndex(i);
+    el.classList.toggle("active", i===activeId);
+  }
+}
+
+/* -----------------------------
+   Human controls
+------------------------------ */
+function setHumanControlsEnabled(on){
+  $("#btnFold").disabled = !on;
+  $("#btnCheckCall").disabled = !on;
+  $("#btnRaise").disabled = !on;
+  $("#raiseSlider").disabled = !on;
+  $("#btnNextHand").disabled = on || !state.handOver;
+}
+
+function endHandUI(){
+  state.awaitingHuman = false;
+  setHumanControlsEnabled(false);
+  $("#btnNextHand").disabled = false;
+  highlightActive(-1); // remove seat highlight
+}
+
+
+function updateActionBarLabels(){
+  const p = state.players[0];
+  const need = state.toCall - p.bet;
+  const canCheck = need<=0;
+  $("#btnCheckCall").textContent = canCheck ? "Check" : `Call ${Math.min(need, p.stack)}`;
+  // Slider range for raise
+  const minRaiseTo = state.toCall + Math.max(state.bb, state.toCall || state.bb); // simple min
+  const minTo = Math.min(p.bet + p.stack, Math.max(minRaiseTo, state.toCall)); // if short, allow all-in
+  const maxTo = p.bet + p.stack;
+
+  const slider = $("#raiseSlider");
+  slider.min = String(minTo);
+  slider.max = String(maxTo);
+  slider.value = String(Math.min(maxTo, Math.max(minTo, state.toCall + state.bb)));
+
+  $("#raiseAmt").textContent = slider.value;
+}
+
+$("#raiseSlider").addEventListener("input", ()=>{
+  $("#raiseAmt").textContent = $("#raiseSlider").value;
+});
+
+$("#btnFold").addEventListener("click", ()=>{
+  if(!state.awaitingHuman) return;
+  const p = state.players[0];
+  fold(p);
+  state._actedThisStreet?.add(0);
+  state.awaitingHuman = false;
+  setHumanControlsEnabled(false);
+  state.actionIndex = nextActiveFrom(0) ?? 0;
+  renderAll();
+  scheduleLoop();
+
+});
+
+$("#btnCheckCall").addEventListener("click", ()=>{
+  if(!state.awaitingHuman) return;
+  const p = state.players[0];
+  const need = state.toCall - p.bet;
+  if(need<=0) check(p);
+  else call(p);
+  state._actedThisStreet?.add(0);
+  state.awaitingHuman = false;
+  setHumanControlsEnabled(false);
+  state.actionIndex = nextActiveFrom(0) ?? 0;
+  renderAll();
+  scheduleLoop();
+
+});
+
+$("#btnRaise").addEventListener("click", ()=>{
+  if(!state.awaitingHuman) return;
+  const p = state.players[0];
+
+  const target = Number($("#raiseSlider").value);
+  const currentToCall = state.toCall;
+
+  // If target <= toCall, treat as call/check
+  if(target <= currentToCall){
+    const need = currentToCall - p.bet;
+    if(need<=0) check(p);
+    else call(p);
+  } else {
+    raiseTo(p, target);
+    // On a raise, reset acted set: everyone must respond again (but raiser has acted)
+    state._actedThisStreet = new Set([0]);
+  }
+
+  state.awaitingHuman = false;
+  setHumanControlsEnabled(false);
+  state.actionIndex = nextActiveFrom(0) ?? 0;
+  renderAll();
+  scheduleLoop();
+
+});
+
+$("#btnNextHand").addEventListener("click", ()=>{
+  if(!state.handOver) return;
+  state.handNo += 1;
+  $("#handNo").textContent = state.handNo;
+  startNewHand();
+});
+
+/* -----------------------------
+   Rendering
+------------------------------ */
+function renderSeat(i){
+  const el = seatElByIndex(i);
+  const p = state.players[i];
+
+
+    // SET PLAYER NAME HERE
+  const nameEl = el.querySelector(".name");
+  if(nameEl){
+    nameEl.textContent = seatName(i);
+  }
+
+  el.classList.toggle("folded", !p.inHand);
+
+  // stack/bet
+  el.querySelector("[data-stack]").textContent = `Stack: ${p.stack}`;
+  el.querySelector("[data-bet]").textContent = `Bet: ${p.bet}`;
+
+  // badges
+  const badges = el.querySelector("[data-badges]");
+  clearNode(badges);
+  if(i===state.dealer) badges.appendChild(makeBadge("D", "dealer"));
+  if(i===smallBlindIndex()) badges.appendChild(makeBadge("SB", "sb"));
+  if(i===bigBlindIndex()) badges.appendChild(makeBadge("BB", "bb"));
+  if(p.allIn) badges.appendChild(makeBadge("ALL-IN"));
+  if(!p.inHand && p.stack>0) badges.appendChild(makeBadge("FOLDED"));
+
+  // hand render
+  const handEl = el.querySelector("[data-hand]");
+  clearNode(handEl);
+
+  const show = (i===0) || state.handOver || state.street==="Showdown";
+  const hidden = !show;
+
+  // If player not seated (stack 0), show empty
+  if(p.stack<=0 && !p.inHand){
+    // no cards
+    return;
+  }
+
+  for(const c of p.hole){
+    handEl.appendChild(hidden ? renderCard("", {back:true}) : renderCard(cardLabel(c)));
+  }
+}
+
+function makeBadge(text, cls){
+  const b = document.createElement("span");
+  b.className = "badge" + (cls ? ` ${cls}` : "");
+  b.textContent = text;
+  return b;
+}
+
+function renderBoard(){
+  const board = $("#board");
+  clearNode(board);
+
+  // real cards
+  state.board.forEach((c, i) => {
+    board.appendChild(renderCard(cardLabel(c), {back:false, dealtDelay: i*90}));
+  });
+
+  // placeholders to 5
+  for(let i=state.board.length; i<5; i++){
+    board.appendChild(renderCard("", {placeholder:true, back:true}));
+  }
+}
+
+function renderHand(targetSelector, cards, {hidden=false, baseDelay=0} = {}){
+  const el = document.querySelector(`[data-hand="${targetSelector}"]`);
+  clearNode(el);
+
+  cards.forEach((c, i) => {
+    const node = renderCard(cardLabel(c), {
+      back: hidden,
+      dealtDelay: baseDelay + i * 70
+    });
+    el.appendChild(node);
+  });
+}
+
+
+function renderAll(){
+  // seats
+  for(let i=0;i<N;i++) renderSeat(i);
+
+  // center hud
+  $("#pot").textContent = state.pot;
+  $("#toCall").textContent = Math.max(0, state.toCall - state.players[0].bet);
+  $("#blinds").textContent = `${state.sb}/${state.bb}`;
+  $("#handNo").textContent = state.handNo;
+  $("#street").textContent = state.street;
+
+  // update action bar
+  if(state.awaitingHuman) updateActionBarLabels();
+
+  renderBoard();
+}
+
+/* -----------------------------
+   Fix: acted set on CPU raise
+   We patch cpuAct() wrapper to know if toCall changed.
+------------------------------ */
+const _cpuAct = cpuAct;
+cpuAct = function(p){
+  const before = state.toCall;
+  _cpuAct(p);
+  const after = state.toCall;
+  if(after > before){
+    // raise happened -> reset acted set, keep raiser as acted
+    state._actedThisStreet = new Set([p.id]);
+  } else {
+    // non-raise -> keep acted set
+  }
+};
+
+/* -----------------------------
+   Boot
+------------------------------ */
+function init(){
+  state.players = makePlayers();
+  if(!state.cpuNames || state.cpuNames.length !== 7){
+  state.cpuNames = pickCpuNames();
+  }
+
+  $("#handNo").textContent = state.handNo;
+  clearNode($("#log"));
+  log("Click “Next Hand” to start.");
+  setStreet("—");
+  state.handOver = true;
+
+  setHumanControlsEnabled(false);
+  $("#btnNextHand").disabled = false;
+
+  /*renderAll();  ?*/
+  renderAll();
+}
+init();
+
+window.addEventListener("error", (e) => {
+  try {
+    log(`❌ ERROR: ${e.message} (${e.filename.split("/").pop()}:${e.lineno})`);
+  } catch {}
+  // Try to recover controls so you’re not stuck
+  try {
+    state.handOver = true;
+    if (typeof endHandUI === "function") endHandUI();
+    if (typeof renderAll === "function") renderAll();
+  } catch {}
+});
+
+
+</script>
+</body>
+</html>
